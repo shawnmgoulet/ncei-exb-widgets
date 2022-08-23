@@ -8,6 +8,8 @@
   "description": "demonstrate responding to framework messages",
   "copyright": "",
   "license": "http://www.apache.org/licenses/LICENSE-2.0",
+  "commentA": "https://developers.arcgis.com/experience-builder/api-reference/jimu-core/WidgetManifest#dependency is neeeded to load the JSAPI",
+  "dependency": "jimu-arcgis",
   "messageActions": [
     {
       "name": "message-handler",

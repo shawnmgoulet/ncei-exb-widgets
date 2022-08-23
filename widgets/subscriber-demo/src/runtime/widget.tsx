@@ -26,12 +26,17 @@ export default function SubscriberDemo (props: AllWidgetProps<IMConfig>) {
   // console.log('dataSource: ', dataSource)
 
   // TODO how should these be typed?
+  // NOTE
+  // WatchHandles are objects - https://developers.arcgis.com/javascript/latest/api-reference/esri-core-Accessor.html#WatchHandle 
   let extentWatchHandle
   let stationaryWatchHandle
   let queryParamsWatchHandle
 
   // TODO why is this not working?
   // reactiveUtils.watch(
+    // NOTE
+    // https://developers.arcgis.com/javascript/latest/api-reference/esri-core-Accessor.html#watch
+    // need to feed the watch method a path (string or array of strings representing the property or properties to watch)
   //   () => props.stateProps?.lastMessage,
   //   (lastMessage) => {
   //     console.log('lastMessage updated: ', lastMessage)
@@ -71,6 +76,11 @@ export default function SubscriberDemo (props: AllWidgetProps<IMConfig>) {
     if (!extentWatchHandle) {
       extentWatchHandle = jmv.view.watch('extent', (newValue, oldValue) => {
         //TODO why does this happen?
+        // NOTE
+        // An alternative approach could be: https://developers.arcgis.com/javascript/latest/api-reference/esri-views-View.html#animation
+        // watching the jmv.view.animation property https://developers.arcgis.com/javascript/latest/api-reference/esri-views-ViewAnimation.html
+        // MapView.extent doc: https://developers.arcgis.com/javascript/latest/api-reference/esri-views-MapView.html#extent
+        // in the check, shouldn't need to, but may need to && the extent param passed into the check needs to be of type Extent
         if (newValue.equals(oldValue)) {
           console.warn('new extent same as old extent')
           // new extent same as old extent, no action taken
@@ -82,6 +92,9 @@ export default function SubscriberDemo (props: AllWidgetProps<IMConfig>) {
     }
 
     // alternative to watching DataSource queryParams property?
+    // Within the framework, you can set the FeatureLayerQueryParams, then set the query prop on the DataSourceComponent (like in <sdk-samples-repo>/client\sdk-sample\widgets\feature-layer-function\src\runtime\widget.tsx)
+    // There's also the JimuLayerView && JimuLayerViewComponent
+    // syntax below would be something like: `reactiveUtils.watch(() => layer.definitionExpression, () => { console.log(`definition expression: ${definitionExpression}`); });
     if (!queryParamsWatchHandle) {
       const layer = jmv.view.map.layers.find(lyr => lyr.title === 'Deep Sea Coral and Sponge Observations')
       queryParamsWatchHandle = layer.watch('definitionExpression', (newExpression, oldExpression) => {
