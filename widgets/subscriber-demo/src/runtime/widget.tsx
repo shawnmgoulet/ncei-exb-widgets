@@ -120,15 +120,6 @@ export default function SubscriberDemo (props: AllWidgetProps<IMConfig>) {
 
   // fires only once, when widget initially opened
   useEffect(() => {
-
-  //   view.when(() => {
-  //   reactiveUtils.when(() => view.stationary === true, () => {
-  //     if (view.extent) {
-  //       console.log("Extent changed");
-  //     }
-  //   })
-  // })
-
     // one-time cleanup function
     return function cleanup () {
       // remove at time componment is destroyed
