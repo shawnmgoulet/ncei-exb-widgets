@@ -9,12 +9,13 @@ import { JimuMapView, JimuMapViewComponent } from 'jimu-arcgis'
 // import defaultMessages from './translations/default'
 // import { defaultMessages as jimuUIMessages } from 'jimu-ui'
 import reactiveUtils from 'esri/core/reactiveUtils'
+import Accessor from 'esri/core/core/Accessor'
 import { useState, useEffect } from 'react'
 import { IMConfig } from '../config'
 
 export default function SubscriberDemo (props: AllWidgetProps<IMConfig>) {
   const [dataSource, setDataSource] = useState(null)
-  const [view, setView] = useState(null)
+  const [view, setView] = useState<JimuMapView>(null)
 
   // const [lastMessage, setLastMessage] = useState<string>('')
   const lastMessage = props.stateProps?.lastMessage
@@ -28,9 +29,10 @@ export default function SubscriberDemo (props: AllWidgetProps<IMConfig>) {
   // TODO how should these be typed?
   // NOTE
   // WatchHandles are objects - https://developers.arcgis.com/javascript/latest/api-reference/esri-core-Accessor.html#WatchHandle 
-  let extentWatchHandle
-  let stationaryWatchHandle
-  let queryParamsWatchHandle
+  // Accessor - https://developers.arcgis.com/javascript/latest/api-reference/esri-core-Accessor.html
+  let extentWatchHandle: Accessor
+  let stationaryWatchHandle: Accessor
+  let queryParamsWatchHandle: Accessor
 
   // TODO why is this not working?
   // reactiveUtils.watch(
@@ -73,30 +75,42 @@ export default function SubscriberDemo (props: AllWidgetProps<IMConfig>) {
     }
     setView(jmv.view)
 
-    if (!extentWatchHandle) {
-      extentWatchHandle = jmv.view.watch('extent', (newValue, oldValue) => {
-        //TODO why does this happen?
-        // NOTE
-        // An alternative approach could be: https://developers.arcgis.com/javascript/latest/api-reference/esri-views-View.html#animation
-        // watching the jmv.view.animation property https://developers.arcgis.com/javascript/latest/api-reference/esri-views-ViewAnimation.html
-        // MapView.extent doc: https://developers.arcgis.com/javascript/latest/api-reference/esri-views-MapView.html#extent
-        // in the check, shouldn't need to, but may need to && the extent param passed into the check needs to be of type Extent
-        if (newValue.equals(oldValue)) {
-          console.warn('new extent same as old extent')
-          // new extent same as old extent, no action taken
-          return
+    // Replaced your code below with this
+    // here we execute the callback when the stationary is true
+    // no longer executing at the beginning multiple times for me
+    // and it doesn't appear we need to switch to animation
+    jmv.view.when(() => {
+      reactiveUtils.when(() => jmv.view.stationary === true, () => {
+        if (jmv.view.extent) {
+          console.log("Extent changed");
         }
-        // TODO trigger some action
-        console.log('Extent changed')
       })
-    }
+    }, (error)=>{console.error(error)});
+
+    // if (!extentWatchHandle) {
+    //   extentWatchHandle = jmv.view.watch('extent', (newValue, oldValue) => {
+    //     //TODO why does this happen?
+    //     // NOTE
+    //     // An alternative approach could be: https://developers.arcgis.com/javascript/latest/api-reference/esri-views-View.html#animation
+    //     // watching the jmv.view.animation property https://developers.arcgis.com/javascript/latest/api-reference/esri-views-ViewAnimation.html
+    //     // MapView.extent doc: https://developers.arcgis.com/javascript/latest/api-reference/esri-views-MapView.html#extent
+    //     // in the check, shouldn't need to, but may need to && the extent param passed into the check needs to be of type Extent
+    //     if (newValue.equals(oldValue)) {
+    //       console.warn('new extent same as old extent')
+    //       // new extent same as old extent, no action taken
+    //       return
+    //     }
+    //     // TODO trigger some action
+    //     console.log('Extent changed')
+    //   })
+    // }
 
     // alternative to watching DataSource queryParams property?
     // Within the framework, you can set the FeatureLayerQueryParams, then set the query prop on the DataSourceComponent (like in <sdk-samples-repo>/client\sdk-sample\widgets\feature-layer-function\src\runtime\widget.tsx)
     // There's also the JimuLayerView && JimuLayerViewComponent
     // syntax below would be something like: `reactiveUtils.watch(() => layer.definitionExpression, () => { console.log(`definition expression: ${definitionExpression}`); });
     if (!queryParamsWatchHandle) {
-      const layer = jmv.view.map.layers.find(lyr => lyr.title === 'Deep Sea Coral and Sponge Observations')
+      const layer = jmv.view.map.layers.find(lyr => lyr.title === 'USA ZIP Code Points')
       queryParamsWatchHandle = layer.watch('definitionExpression', (newExpression, oldExpression) => {
         // TODO trigger some action
         console.log('layerDefinition changed')
@@ -106,6 +120,15 @@ export default function SubscriberDemo (props: AllWidgetProps<IMConfig>) {
 
   // fires only once, when widget initially opened
   useEffect(() => {
+
+  //   view.when(() => {
+  //   reactiveUtils.when(() => view.stationary === true, () => {
+  //     if (view.extent) {
+  //       console.log("Extent changed");
+  //     }
+  //   })
+  // })
+
     // one-time cleanup function
     return function cleanup () {
       // remove at time componment is destroyed
