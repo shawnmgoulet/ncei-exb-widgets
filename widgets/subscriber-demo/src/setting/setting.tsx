@@ -25,11 +25,12 @@ export default function Setting (props: AllWidgetSettingProps<IMConfig>) {
   }
 
   // TODO why isn't this saved in configuration?
-  const onServiceUrlChange = (value: string) => {
-    console.log('inside onServiceUrlChange with ', value)
+  // set the featureServiceUrl prop to the evt's target.value
+  const onServiceUrlChange = (evt: any) => {
+    console.log('inside onServiceUrlChange with ', evt.target.value)
     props.onSettingChange({
       id: props.id,
-      config: props.config.set('featureServiceUrl', value)
+      config: props.config.set('featureServiceUrl', evt.target.value)
     })
   }
 
@@ -55,7 +56,9 @@ export default function Setting (props: AllWidgetSettingProps<IMConfig>) {
 
     <SettingSection title="FeatureService URL">
       <SettingRow>
-        <TextInput type="url" placeholder="service url" htmlSize={28} onAcceptValue={onServiceUrlChange}/>
+        // Shawn: onChange is available to us because the TextinputProps within text-input.d.ts extends upon InputProps
+        // which extends React.InputHTMLAttributes Interface, which includes the onChange method, returning the evt
+        <TextInput id="featureServiceUrlInput" type="url" placeholder="service url" value={props.config.featureServiceUrl} htmlSize={28} onChange={onServiceUrlChange}/>
       </SettingRow>
     </SettingSection>
 

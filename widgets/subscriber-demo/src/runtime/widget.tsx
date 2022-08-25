@@ -3,7 +3,8 @@ import {
   AllWidgetProps,
   jsx,
   DataSourceComponent,
-  QueriableDataSource
+  QueriableDataSource,
+  css
 } from 'jimu-core'
 import { JimuMapView, JimuMapViewComponent } from 'jimu-arcgis'
 // import defaultMessages from './translations/default'
@@ -22,6 +23,9 @@ export default function SubscriberDemo (props: AllWidgetProps<IMConfig>) {
   console.log('rendering SubscriberDemo. props: ', props)
 
   const featureServiceUrl = props.config.featureServiceUrl ? props.config.featureServiceUrl : 'feature service URL not set'
+  const subscriberDemoStyle = css`
+  border: 1px blue solid;
+  `;
   // console.log('featureServiceUrl: ', featureServiceUrl)
   // console.log('mapView: ', view)
   // console.log('dataSource: ', dataSource)
@@ -39,6 +43,7 @@ export default function SubscriberDemo (props: AllWidgetProps<IMConfig>) {
     // NOTE
     // https://developers.arcgis.com/javascript/latest/api-reference/esri-core-Accessor.html#watch
     // need to feed the watch method a path (string or array of strings representing the property or properties to watch)
+    // needs to be from the JSAPI
   //   () => props.stateProps?.lastMessage,
   //   (lastMessage) => {
   //     console.log('lastMessage updated: ', lastMessage)
@@ -136,7 +141,13 @@ export default function SubscriberDemo (props: AllWidgetProps<IMConfig>) {
   }, [])
 
   return (
-    <div className="widget-demo jimu-widget m-2">
+    <div className="widget-demo jimu-widget m-2" css={subscriberDemoStyle}>
+      {lastMessage && (
+        <label>Last Message:</label>
+      )}
+      {lastMessage && (
+        <p>{lastMessage}</p>
+      )}
       <DataSourceComponent
         useDataSource={props.useDataSources?.[0]}
         widgetId={props.id}
