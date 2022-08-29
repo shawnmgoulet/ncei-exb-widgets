@@ -36,9 +36,13 @@ export default class MessageHandlerAction extends AbstractMessageAction {
       case MessageType.DataSourceFilterChange:
         console.log('MessageHandlerAction: got DataSourceFilterChangeMessage', message, actionConfig)
         const dataSourceFilterChangeMessage = message as DataSourceFilterChangeMessage
-        // TODO since the contents of the DataSourceFilterChangeMessage don't change with the change in queryParams
-        // the widget re-render is never triggered
-        getAppStore().dispatch(appActions.widgetStatePropChange(this.widgetId, 'dataSourceId', dataSourceFilterChangeMessage.dataSourceId))
+        // TODO DataSourceFilterChangeMessage contents do not change when filters
+        // change, so what is good way to trigger widget re-render? Can we access
+        // the configured DataSource here and retrieve the layerDefinition string
+        // to set it as widgetStateProp?
+        // HACK set property to datetime string to ensure that it is different every time filter changes
+        const timestamp = new Date().toISOString()
+        getAppStore().dispatch(appActions.widgetStatePropChange(this.widgetId, 'dataSourceFilterChangeFlag', timestamp))
         break
 
       case MessageType.ExtentChange:
