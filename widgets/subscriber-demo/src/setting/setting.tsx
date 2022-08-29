@@ -25,11 +25,11 @@ export default function Setting (props: AllWidgetSettingProps<IMConfig>) {
   }
 
   // TODO why isn't this saved in configuration?
-  const onServiceUrlChange = (value: string) => {
-    console.log('inside onServiceUrlChange with ', value)
+  const onServiceUrlChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    console.log('inside onServiceUrlChange with ', event.target.value)
     props.onSettingChange({
       id: props.id,
-      config: props.config.set('featureServiceUrl', value)
+      config: props.config.set('featureServiceUrl', event.target.value)
     })
   }
 
@@ -55,7 +55,7 @@ export default function Setting (props: AllWidgetSettingProps<IMConfig>) {
 
     <SettingSection title="FeatureService URL">
       <SettingRow>
-        <TextInput type="url" placeholder="service url" htmlSize={28} onAcceptValue={onServiceUrlChange}/>
+        <TextInput type="url" placeholder="service url" htmlSize={28} value={props.config.featureServiceUrl} onChange={onServiceUrlChange}/>
       </SettingRow>
     </SettingSection>
 
