@@ -1,5 +1,10 @@
 /** @jsx jsx */
-import { React, jsx, ActionSettingProps, ImmutableObject } from 'jimu-core'
+import {
+  React,
+  jsx,
+  ActionSettingProps,
+  ImmutableObject
+} from 'jimu-core'
 
 interface States {}
 
@@ -10,7 +15,7 @@ export type IMConfig = ImmutableObject<Config>
 class MessageHandlerActionSetting extends React.PureComponent<ActionSettingProps<IMConfig>, States> {
   render () {
     return <div>
-        <p>No configurable properties for this widget</p>
+      no configuration options available
     </div>
   }
 }

@@ -9,7 +9,11 @@ import {
   DataSourceFilterChangeMessage,
   LocationChangeMessage,
   DataRecordsSelectionChangeMessage,
-  DataRecordSetChangeMessage
+  DataRecordSetChangeMessage,
+  DataSourceManager,
+  DataSource,
+  SqlQueryParams,
+  QueriableDataSource
 } from 'jimu-core'
 import Extent from 'esri/geometry/Extent'
 import webMercatorUtils from 'esri/geometry/support/webMercatorUtils'
@@ -34,15 +38,11 @@ export default class MessageHandlerAction extends AbstractMessageAction {
   onExecute (message: Message, actionConfig?: any): Promise<boolean> | boolean {
     switch (message.type) {
       case MessageType.DataSourceFilterChange:
+        const dsFilterChangeMessage = message as DataSourceFilterChangeMessage
         console.log('MessageHandlerAction: got DataSourceFilterChangeMessage', message, actionConfig)
-        const dataSourceFilterChangeMessage = message as DataSourceFilterChangeMessage
-        // TODO DataSourceFilterChangeMessage contents do not change when filters
-        // change, so what is good way to trigger widget re-render? Can we access
-        // the configured DataSource here and retrieve the layerDefinition string
-        // to set it as widgetStateProp?
-        // HACK set property to datetime string to ensure that it is different every time filter changes
-        const timestamp = new Date().toISOString()
-        getAppStore().dispatch(appActions.widgetStatePropChange(this.widgetId, 'dataSourceFilterChangeFlag', timestamp))
+        const dataSource = DataSourceManager.getInstance().getDataSource(dsFilterChangeMessage.dataSourceId) as QueriableDataSource
+        const queryParams: SqlQueryParams = dataSource.getCurrentQueryParams()
+        getAppStore().dispatch(appActions.widgetStatePropChange(this.widgetId, 'queryParams', queryParams.where))
         break
 
       case MessageType.ExtentChange:
