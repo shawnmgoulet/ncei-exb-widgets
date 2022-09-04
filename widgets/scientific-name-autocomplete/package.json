@@ -1,0 +1,20 @@
+{
+  "name": "scientific-name-autocomplete",
+  "version": "1.0.0",
+  "description": "an autocomplete widget built with MaterialUI that uses a static file of scientific names",
+  "main": "index.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "John Cartwright",
+  "dependencies": {
+    "@emotion/react": "^11.10.4",
+    "@emotion/styled": "^11.10.4",
+    "@mui/material": "^5.10.3",
+    "install": "^0.13.0",
+    "npm": "^8.19.1"
+  }
+}
