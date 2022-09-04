@@ -82,8 +82,9 @@ export default function Widget (props: AllWidgetProps<IMConfig> & ExtraProps) {
       console.error("density layer not found")
       return
     }
-    
-    if (definitionExpression && definitionExpression != '(1=1)') {
+
+    console.log('layer-listener: definitionExpression = ', definitionExpression)
+    if (definitionExpression && (definitionExpression !== '(1=1)' && definitionExpression !== '1=1')) {
       pointLayer.visible = true
       // pointLayer.refresh()
       densityLayer.visible = false
