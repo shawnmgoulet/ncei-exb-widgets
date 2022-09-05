@@ -1,70 +1,39 @@
+/** @jsx jsx */
 import {
-  React,
-  utils,
   AllWidgetProps,
-  // DataSourceComponent,
-  // DataSourceStatus,
-  // IMDataSourceInfo,
-  // DataSource,
-  // QueriableDataSource
+  jsx,
+  IMState,
+  ReactRedux
 } from 'jimu-core'
-// import reactiveUtils from 'esri/core/reactiveUtils'
+import webMercatorUtils from 'esri/geometry/support/webMercatorUtils'
+import Extent from 'esri/geometry/Extent'
+import { IMConfig } from '../config'
+import defaultMessages from './translations/default'
 
-export default class Widget extends React.PureComponent<AllWidgetProps<unknown>, { extent: string, queryParams: string }> {
-  state = { extent: null, queryParams: null }
+const { useSelector } = ReactRedux
 
-  componentDidUpdate (prevProps: AllWidgetProps<unknown>) {
-    // console.log('inside componentDidUpdate...')
-    if (utils.getValue(this.props, 'stateProps.extent') !== utils.getValue(prevProps, 'stateProps.extent')) {
-      const extent = utils.getValue(this.props, 'stateProps.extent')
-      console.log(extent)
-      this.setState({ extent: extent })
-    }
+// since we cannot pass Extent object from MessageAction and cannot convert to
+// geographic in MessageAction due to load error using webMercatorUtils
+function convertAndFormatCoordinates (bboxString: string, dp: number = 5) {
+  const [xmin, ymin, xmax, ymax] = bboxString.split(',').map(str => parseFloat(str))
+  const extent = new Extent({ xmin: xmin, ymin: ymin, xmax: xmax, ymax: ymax, spatialReference: { wkid: 102100 } })
+  const geoExtent = webMercatorUtils.webMercatorToGeographic(extent, false) as Extent
+  return `${geoExtent.xmin.toFixed(dp)}, ${geoExtent.ymin.toFixed(dp)}, ${geoExtent.xmax.toFixed(dp)}, ${geoExtent.ymax.toFixed(dp)}`
+}
 
-    if (utils.getValue(this.props, 'stateProps.queryParams') !== utils.getValue(prevProps, 'stateProps.queryParams')) {
-      const queryParams = utils.getValue(this.props, 'stateProps.queryParams')
-      console.log('queryParams from DataSourceFilterChangeMessage: ', queryParams)
-      this.setState({ queryParams: queryParams })
-    }
+export default function SubscriberDemo (props: AllWidgetProps<IMConfig>) {
+  // console.log('props: ', props)
 
-    // const myDs = this.props.useDataSources[0]
-  }
+  // get state for this widget
+  const widgetState = useSelector((state: IMState) => {
+    return state.widgetsState[props.widgetId]
+  })
+  // console.log('widgetState', widgetState)
 
-  componentDidMount () {
-    // console.log('inside componentDidMount with ', this.props.stateProps?.extent)
-  }
-
-  // isDsConfigured = () => {
-  //   if (this.props.useDataSources && this.props.useDataSources.length === 1) {
-  //     return true
-  //   }
-  //   return false
-  // }
-
-  render () {
-    // console.log('rendering...')
-    // console.log('props: ', this.props)
-    return <div className="widget-subscribe" style={{ overflow: 'auto', maxHeight: '700px' }}>
-        <p>Extent: {this.state.extent}</p>
-        <p>Filter: {this.state.queryParams}</p>
-
-        {/* <DataSourceComponent useDataSource={this.props.useDataSources[0]} widgetId={this.props.id} localId="query-result">
-        {
-          (ds: QueriableDataSource, info: IMDataSourceInfo) => {
-            const isLoaded = info.status === DataSourceStatus.Loaded
-            let content
-            if (!this.props.stateProps) {
-              content = 'no message'
-            } else {
-              content = <div>
-                <div>query state: {info.status}</div>
-                <div>isDsConfigured: {this.isDsConfigured().toString()}</div>
-              </div>
-            }
-            return content
-          }
-      }
-      </DataSourceComponent> */}
+  return (
+    <div>
+      <p>Extent: {widgetState?.extent ? convertAndFormatCoordinates(widgetState.extent, 3) : ''}</p>
+      <p>Filter: {widgetState?.queryParams ? widgetState.queryParams : 'none'}</p>
     </div>
-  }
+  )
 }
