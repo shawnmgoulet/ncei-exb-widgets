@@ -49,7 +49,7 @@ export default function H3Layer (props: AllWidgetProps<IMConfig>) {
   })
   // console.log('h3-layer: extent', widgetState?.extent)
 
-  // TODO why is queryParams available here but not on line 57
+  // TODO why is queryParams available here but not on line 56
   console.log('h3-layer: queryParams', widgetState?.queryParams)
 
   function displayHexbinSummary (hitTestResult) {
