@@ -1,0 +1,14 @@
+{
+  "name": "h3-layer",
+  "version": "1.0.0",
+  "description": "widget which constructs a client-side layer based on H3 tiles",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "John Cartwright",
+  "dependencies": {
+    "h3-js": "^3.7.2"
+  }
+}
