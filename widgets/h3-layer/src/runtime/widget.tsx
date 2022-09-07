@@ -49,32 +49,14 @@ export default function H3Layer (props: AllWidgetProps<IMConfig>) {
     return state.widgetsState[props.widgetId]
   })
   // console.log('h3-layer: extent', widgetState?.extent)
+
+  // TODO why is queryParams available here but not on line 58
   console.log('h3-layer: queryParams', widgetState?.queryParams)
-  /*
-  // TODO not working - why is view null?
-  function viewClickHandler(evt) {
-    view.hitTest(evt).then((response) => {
-      // only get the graphics returned from myLayer
-      const graphicHits = response.results?.filter(hitResult => hitResult.type === 'graphic')
-      if (graphicHits?.length > 0) {
-        graphicHits.forEach((graphicHit) => {
-          // TODO take some action
-          console.log('attributes: ', graphicHit.graphic.attributes)
-        })
-      }
-    })
-  }
-  */
 
   function displayHexbinSummary (hitTestResult) {
-    console.log('hitTestResult: ', hitTestResult)
-    // TODO why is this undefined?
-    console.log('displayHexbinSummary: queryParams', widgetState?.queryParams)
     if (!widgetState?.queryParams) { console.warn('No queryParams found') };
 
     const whereClause = widgetState?.queryParams || '1=1'
-    // hitTestResult.results.forEach(it => console.log(it.layer.type))
-
     // only get the graphics returned from myLayer
     const graphicHits = hitTestResult.results?.filter(hitResult => hitResult.layer.type === 'graphics')
     if (graphicHits?.length > 0) {
@@ -88,7 +70,6 @@ export default function H3Layer (props: AllWidgetProps<IMConfig>) {
     }
   }
 
-  // runs once
   const activeViewChangeHandler = (jmv: JimuMapView) => {
     if (!jmv) {
       console.warn('no MapView')
@@ -96,17 +77,17 @@ export default function H3Layer (props: AllWidgetProps<IMConfig>) {
     }
     setView(jmv.view)
 
-    // jmv.view.on('click', viewClickHandler)
-    // TODO does this block popup?
-    jmv.view.on('click', (evt) => {
-      jmv.view.hitTest(evt).then(response => displayHexbinSummary(response))
+    jmv.view.on('layerview-create', (event) => {
+      console.log(`LayerView for ${event.layer.title} (${event.layer.id}) created`, widgetState?.queryParams)
     })
 
     const graphicsLayer = new GraphicsLayer()
 
     jmv.view.when(() => {
       jmv.view.map.add(graphicsLayer)
-      console.log('view = ', view)
+      jmv.view.on('click', (evt) => {
+        jmv.view.hitTest(evt).then(response => displayHexbinSummary(response))
+      })
     }).then(async () => {
       const graphicsAllFeatures = await getGraphics()
       graphicsLayer.removeAll()
