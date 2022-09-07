@@ -38,7 +38,6 @@ const { useSelector } = ReactRedux
 
 export default function H3Layer (props: AllWidgetProps<IMConfig>) {
   const [view, setView] = useState<MapView|SceneView>(null)
-  const [queryParams, setQueryParams] = useState(null)
 
   const layerName = props.config?.layerName ? props.config.layerName : 'layer name not set'
 
