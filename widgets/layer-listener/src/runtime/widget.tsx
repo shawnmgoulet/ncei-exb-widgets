@@ -95,10 +95,8 @@ export default function Widget (props: AllWidgetProps<IMConfig> & ExtraProps) {
       pointLayer.visible = false
       densityLayer.visible = true
     }
+  }, [extent, isStationary, definitionExpression, isUpdating, view, pointLayer, densityLayer, props.config.zoomLevelToggle])
 
-  }, [extent, isStationary, definitionExpression ])
-
-  
   // only called when widget first loaded
   const activeViewChangeHandler = (jmv: JimuMapView) => {
     if (! jmv) {
@@ -136,7 +134,7 @@ export default function Widget (props: AllWidgetProps<IMConfig> & ExtraProps) {
     if (!updatingWatch) {
       updatingWatch = jmv.view.watch('updating', (newStatus, oldStatus) => {
         // console.log(`updating changed from ${oldStatus} to ${newStatus}...`)
-        // setIsUpdating(newStatus)
+        setIsUpdating(newStatus)
       })
     }
 
