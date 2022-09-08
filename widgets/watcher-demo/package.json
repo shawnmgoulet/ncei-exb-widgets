@@ -1,0 +1,18 @@
+{
+  "name": "watcher-demo",
+  "version": "1.0.0",
+  "description": "example demonstrating inter-widget communication using shared resources, e.g. MapView, DataSource",
+  "main": "index.js",
+  "directories": {
+    "lib": "lib",
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "John Cartwright",
+  "dependencies": {
+    "h3-js": "^3.7.2"
+  }
+}
