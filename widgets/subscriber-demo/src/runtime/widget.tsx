@@ -36,9 +36,13 @@ export default function SubscriberDemo (props: AllWidgetProps<IMConfig>) {
     return state.widgetsState[props.widgetId]
   })
 
+  const myName = 'jcc'
+
   function buttonHandler (evt) {
     // TODO widgetState is this undefined
     alert(widgetState?.queryParams)
+    // this works fine
+    alert(myName)
   }
 
   return (
