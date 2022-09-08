@@ -5,6 +5,8 @@ import {
   IMState,
   ReactRedux
 } from 'jimu-core'
+import { Button } from 'jimu-ui'
+
 import webMercatorUtils from 'esri/geometry/support/webMercatorUtils'
 import Extent from 'esri/geometry/Extent'
 import { IMConfig } from '../config'
@@ -29,18 +31,21 @@ function convertAndFormatCoordinates (coords, dp: number = 5) {
 // }
 
 export default function SubscriberDemo (props: AllWidgetProps<IMConfig>) {
-  // console.log('props: ', props)
-
   // get state for this widget
   const widgetState = useSelector((state: IMState) => {
     return state.widgetsState[props.widgetId]
   })
-  console.log('widgetState', widgetState?.extent)
+
+  function buttonHandler (evt) {
+    // TODO widgetState is this undefined
+    alert(widgetState?.queryParams)
+  }
 
   return (
     <div>
       <p>Extent: {widgetState?.extent ? convertAndFormatCoordinates(widgetState.extent, 3) : ''}</p>
       <p>Filter: {widgetState?.queryParams ? widgetState.queryParams : 'none'}</p>
+      <Button aria-label="Button" type="primary" onClick={buttonHandler}>Show queryParams</Button>
     </div>
   )
 }
