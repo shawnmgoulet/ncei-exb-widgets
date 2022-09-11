@@ -215,5 +215,6 @@ export {
   getDepthRange,
   getPhylumCounts,
   convertAndFormatCoordinates,
+  createLayer,
   helloWorld, TESTME
 }
