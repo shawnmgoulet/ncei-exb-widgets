@@ -15,6 +15,8 @@ import reactiveUtils from 'esri/core/reactiveUtils'
 // import FeatureLayer from 'esri/layers/FeatureLayer'
 import GraphicsLayer from 'esri/layers/GraphicsLayer'
 import FeatureLayer from 'esri/layers/FeatureLayer'
+import TileLayer from "esri/layers/TileLayer";
+
 
 import MapView from 'esri/views/MapView'
 import SceneView from 'esri/views/SceneView'
@@ -44,19 +46,24 @@ export default function H3Layer (props: AllWidgetProps<IMConfig>) {
   const [h3, setH3] = useState(null)
 
   const layerName = props.config?.layerName ? props.config.layerName : 'layer name not set'
-
+  const tileLayer = new TileLayer({
+    url: 'https://tiles.arcgis.com/tiles/C8EMgrsFcRFL6LrL/arcgis/rest/services/multibeam_mosaic_hillshade/MapServer'
+  })
   // console.log('props: ', props)
 
   // get state for this widget
   const widgetState = useSelector((state: IMState) => {
     return state.widgetsState[props.widgetId]
   })
+  console.log('widgetState0: ', widgetState)
+
   // console.log('h3-layer: extent', widgetState?.extent)
 
   // TODO why is queryParams available here but not on line 56
   console.log('h3-layer: queryParams', widgetState?.queryParams)
 
   function displayHexbinSummary (hitTestResult) {
+    console.log('widgetState1: ', widgetState)
     if (!widgetState?.queryParams) { console.warn('No queryParams found') };
 
     const whereClause = widgetState?.queryParams || '1=1'
@@ -92,12 +99,12 @@ export default function H3Layer (props: AllWidgetProps<IMConfig>) {
 
     const graphicsLayer = new GraphicsLayer()
     const opts = {
-      include: graphicsLayer
+      include: graphicsLayer,
+      exclude: tileLayer
     }
     jmv.view.when(() => {
       jmv.view.map.add(graphicsLayer)
       jmv.view.on('click', (evt) => {
-        console.log('mouse click detected')
         try {
           // TODO will throw error trying to identify on Tile Layer unless pointer
           // lands on a graphic AND a feature from registered DataSource 
@@ -111,15 +118,15 @@ export default function H3Layer (props: AllWidgetProps<IMConfig>) {
       const graphicsAllFeatures = await getGraphics()
       graphicsLayer.removeAll()
       graphicsLayer.graphics.addMany(graphicsAllFeatures)
-      const featureLayer: FeatureLayer = createLayer(graphicsAllFeatures)
-      featureLayer.watch('loadStatus', () => console.log(`featureLayer loadStatus changed to ${featureLayer.loadStatus}...`))
-      jmv.view.whenLayerView(featureLayer).then(function(layerView){
-        layerView.watch("updating", function(value){
-          console.log(`featureLayer: ${value}`)
-        })
-      })
-      featureLayer.popupTemplate = featurePopupTemplate
-      jmv.view.map.add(featureLayer)
+      // const featureLayer: FeatureLayer = createLayer(graphicsAllFeatures)
+      // featureLayer.watch('loadStatus', () => console.log(`featureLayer loadStatus changed to ${featureLayer.loadStatus}...`))
+      // jmv.view.whenLayerView(featureLayer).then(function(layerView){
+      //   layerView.watch("updating", function(value){
+      //     console.log(`featureLayer: ${value}`)
+      //   })
+      // })
+      // featureLayer.popupTemplate = featurePopupTemplate
+      // jmv.view.map.add(featureLayer)
     })
   }
 
