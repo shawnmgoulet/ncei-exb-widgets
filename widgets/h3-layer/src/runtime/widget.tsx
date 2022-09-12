@@ -91,14 +91,17 @@ export default function H3Layer (props: AllWidgetProps<IMConfig>) {
     })
 
     const graphicsLayer = new GraphicsLayer()
-
+    const opts = {
+      include: graphicsLayer
+    }
     jmv.view.when(() => {
       jmv.view.map.add(graphicsLayer)
       jmv.view.on('click', (evt) => {
         console.log('mouse click detected')
         try {
-          // TODO somewhat randomly will throw error trying to identify on Tile Layer
-          jmv.view.hitTest(evt).then(response => displayHexbinSummary(response))
+          // TODO will throw error trying to identify on Tile Layer unless pointer
+          // lands on a graphic AND a feature from registered DataSource 
+          jmv.view.hitTest(evt, opts).then(response => displayHexbinSummary(response))
         } catch (e) {
           // TODO not catching errors in identify operation
           console.error('hitTest failed: ', e)
@@ -108,15 +111,15 @@ export default function H3Layer (props: AllWidgetProps<IMConfig>) {
       const graphicsAllFeatures = await getGraphics()
       graphicsLayer.removeAll()
       graphicsLayer.graphics.addMany(graphicsAllFeatures)
-      // const featureLayer: FeatureLayer = createLayer(graphicsAllFeatures)
-      // featureLayer.watch('loadStatus', () => console.log(`featureLayer loadStatus changed to ${featureLayer.loadStatus}...`))
-      // jmv.view.whenLayerView(featureLayer).then(function(layerView){
-      //   layerView.watch("updating", function(value){
-      //     console.log(`featureLayer: ${value}`)
-      //   })
-      // })
-      // featureLayer.popupTemplate = featurePopupTemplate
-      // jmv.view.map.add(featureLayer)
+      const featureLayer: FeatureLayer = createLayer(graphicsAllFeatures)
+      featureLayer.watch('loadStatus', () => console.log(`featureLayer loadStatus changed to ${featureLayer.loadStatus}...`))
+      jmv.view.whenLayerView(featureLayer).then(function(layerView){
+        layerView.watch("updating", function(value){
+          console.log(`featureLayer: ${value}`)
+        })
+      })
+      featureLayer.popupTemplate = featurePopupTemplate
+      jmv.view.map.add(featureLayer)
     })
   }
 
