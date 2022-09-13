@@ -23,7 +23,7 @@ import SceneView from 'esri/views/SceneView'
 // import Graphic from 'esri/Graphic'
 // import PopupTemplate from 'esri/PopupTemplate'
 // import { h3ToGeoBoundary } from 'h3-js'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { IMConfig } from '../config'
 import defaultMessages from './translations/default'
 import {
@@ -44,7 +44,7 @@ const { useSelector } = ReactRedux
 export default function H3Layer (props: AllWidgetProps<IMConfig>) {
   const [view, setView] = useState<MapView|SceneView>(null)
   const [h3, setH3] = useState(null)
-
+  const queryParamsRef = useRef()
   const layerName = props.config?.layerName ? props.config.layerName : 'layer name not set'
   const tileLayer = new TileLayer({
     url: 'https://tiles.arcgis.com/tiles/C8EMgrsFcRFL6LrL/arcgis/rest/services/multibeam_mosaic_hillshade/MapServer'
@@ -56,6 +56,7 @@ export default function H3Layer (props: AllWidgetProps<IMConfig>) {
     return state.widgetsState[props.widgetId]
   })
   console.log('widgetState0: ', widgetState)
+  queryParamsRef.current =  widgetState?.queryParams
 
   // console.log('h3-layer: extent', widgetState?.extent)
 
@@ -64,6 +65,8 @@ export default function H3Layer (props: AllWidgetProps<IMConfig>) {
 
   function displayHexbinSummary (hitTestResult) {
     console.log('widgetState1: ', widgetState)
+    console.log('ref: ', queryParamsRef.current)
+
     if (!widgetState?.queryParams) { console.warn('No queryParams found') };
 
     const whereClause = widgetState?.queryParams || '1=1'
