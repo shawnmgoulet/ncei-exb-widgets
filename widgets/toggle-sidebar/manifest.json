@@ -1,0 +1,19 @@
+{
+  "name": "toggle-sidebar",
+  "label": "Toggle Sidebar",
+  "type": "widget",
+  "version": "1.9.0",
+  "exbVersion": "1.9.0",
+  "author": "John Cartwright",
+  "description": "open the configured sidebar if a feature in the configured feature layer is clicked",
+  "copyright": "",
+  "license": "http://www.apache.org/licenses/LICENSE-2.0",
+  "properties": {},
+  "translatedLocales": [
+    "en"
+  ],
+  "defaultSize": {
+    "width": 200,
+    "height": 200
+  }
+}
