@@ -41,8 +41,6 @@ export default function SubscriberDemo (props: AllWidgetProps<IMConfig>) {
   function buttonHandler (evt) {
     // TODO widgetState is this undefined
     alert(widgetState?.queryParams)
-    // this works fine
-    alert(myName)
   }
 
   return (

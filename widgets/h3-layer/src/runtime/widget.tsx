@@ -58,34 +58,26 @@ export default function H3Layer (props: AllWidgetProps<IMConfig>) {
   console.log('widgetState0: ', widgetState)
   queryParamsRef.current =  widgetState?.queryParams
 
-  // console.log('h3-layer: extent', widgetState?.extent)
-
-  // TODO why is queryParams available here but not on line 56
+  // TODO why is queryParams available here but not within displayHexbinSummary()?
   console.log('h3-layer: queryParams', widgetState?.queryParams)
 
   function displayHexbinSummary (hitTestResult) {
+    // TODO why are these not equal when filter is applied?
     console.log('widgetState1: ', widgetState)
     console.log('ref: ', queryParamsRef.current)
+    const whereClause = queryParamsRef.current || '1=1'
 
-    if (!widgetState?.queryParams) { console.warn('No queryParams found') };
-
-    const whereClause = widgetState?.queryParams || '1=1'
-    // only get the graphics returned from myLayer
     const graphicHits = hitTestResult.results?.filter(hitResult => hitResult.layer.type === 'graphics')
-    if (graphicHits?.length > 1) {console.error('got more than one graphic')}
-    if (graphicHits?.length > 0) {
-      // should only be 1
-      graphicHits.forEach((graphicHit) => {
-        const h3 = graphicHit.graphic.attributes.h3
-        setH3(h3)
-        // TODO take some action. Message to another widget(s) to display results?
-        // console.log('attributes: ', graphicHit.graphic.attributes)
-        getDepthRange(h3, whereClause).then(data => console.log('depths: ', data))
-        getPhylumCounts(h3, whereClause).then(data => console.log('Phylum counts: ', data))
-      })
-    } else {
-      console.log('no graphic detected')
+    if (graphicHits?.length === 1) {
+      const h3 = graphicHits[0].graphic.attributes.h3
+      // TODO Message to another widget(s) to display results?
+      setH3(h3)
+      getDepthRange(h3, whereClause).then(data => console.log('depths: ', data))
+      getPhylumCounts(h3, whereClause).then(data => console.log('Phylum counts: ', data))
+    } else if (graphicHits?.length === 0) {
       setH3(null)
+    } else {
+      console.error('there should only be 0 or 1 graphics detected')
     }
   }
 

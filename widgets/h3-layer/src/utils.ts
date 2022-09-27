@@ -175,13 +175,12 @@ function lookUpColor(min, max, value) {
 
 async function getGraphics (whereClause = '1=1') {
   const data = await getH3Counts(whereClause)
-  console.log(data)
-  // const minCount = data.reduce((prev, curr) => Math.min(prev, curr))
+  // would reduce() be more efficient?
   // const maxCount = data.reduce((prev, curr) => Math.max(prev, curr))
+  // TODO use in color classification
   const minCount = Math.min(...data.map(it => it.Count))
   const maxCount = Math.max(...data.map(it => it.Count))
-
-  console.log('min, max: ', minCount, maxCount)
+  console.log(`bin counts range from ${minCount} to ${maxCount}`)
   const hexagonGraphics = []
   data.forEach(element => {
     // console.log(element.h3_2, element.Count )
