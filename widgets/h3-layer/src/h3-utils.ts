@@ -7,6 +7,7 @@ import SimpleFillSymbol from 'esri/symbols/SimpleFillSymbol'
 import jsonUtils from 'esri/symbols/support/jsonUtils'
 import { h3ToGeoBoundary } from 'h3-js'
 import WhereClause from 'esri/core/sql/WhereClause'
+import { Classification } from './Classification'
 
 function helloWorld (name: string = 'World'): string {
   return `Hello ${name}!`
@@ -178,9 +179,17 @@ const highlightFillSymbol = {
   }
 }
 
-function lookUpColor(min, max, value) {
-  const classes = 5
-  // TODO 
+function getSimpleFillSymbol(fillColor = [227, 139, 79, 0.2]) {
+  // default to Orange, opacity 80%
+  // var randomColor = Math.floor(Math.random()*16777215).toString(16);
+  return {
+    type: "simple-fill",
+    color: fillColor,
+    outline: {
+      color: [255, 255, 255],
+      width: 1
+    }
+  }
 }
 
 async function getGraphics (whereClause = '1=1') {
@@ -188,9 +197,16 @@ async function getGraphics (whereClause = '1=1') {
   // would reduce() be more efficient?
   // const maxCount = data.reduce((prev, curr) => Math.max(prev, curr))
   // TODO use in color classification
-  const minCount = Math.min(...data.map(it => it.Count))
-  const maxCount = Math.max(...data.map(it => it.Count))
-  console.log(`bin counts range from ${minCount} to ${maxCount}`)
+  // const minCount = Math.min(...data.map(it => it.Count))
+  // const maxCount = Math.max(...data.map(it => it.Count))
+  // console.log(`bin counts range from ${minCount} to ${maxCount}`)
+  // 4 classes == 5 bins
+  const classification = new Classification({ bucketType: 'QNT', data: data.map(it => it.Count), numClasses: 4 })
+  await classification.load()
+  // console.log('breakpoints: ', classification.breakpoints)
+  console.log(`${classification.numElements} elements with values ranging from ${classification.min} to ${classification.max} with an average of ${classification.average}`)
+  classification.printBinCounts()
+
   const hexagonGraphics = []
   data.forEach(element => {
     // console.log(element.h3_2, element.Count )
@@ -203,7 +219,7 @@ async function getGraphics (whereClause = '1=1') {
         h3: element.h3_2,
         count: element.Count
       },
-      symbol: simpleFillSymbol
+      symbol: getSimpleFillSymbol(classification.getColor(element.Count))
       // popupTemplate: graphicPopupTemplate
     })
     if (hexGraphic.geometry.extent.width > 50) {

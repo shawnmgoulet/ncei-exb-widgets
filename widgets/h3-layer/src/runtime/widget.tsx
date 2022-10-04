@@ -52,7 +52,7 @@ import {
   convertAndFormatCoordinates,
   createLayer,
   highlightFillSymbol
-} from '../utils'
+} from '../h3-utils'
 
 const { useSelector } = ReactRedux
 
