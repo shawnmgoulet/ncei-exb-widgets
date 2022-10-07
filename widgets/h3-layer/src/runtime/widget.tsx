@@ -1,7 +1,7 @@
 /** @jsx jsx */
 
 /*
- * there are two runtime events impact this widget:
+ * there are two runtime events which impact this widget:
  *
  * 1) mapClick
  * this only requires that the hexbin summary be updated
@@ -25,33 +25,34 @@ import {
 import { JimuMapView, JimuMapViewComponent } from 'jimu-arcgis'
 // import webMercatorUtils from 'esri/geometry/support/webMercatorUtils'
 // import Extent from 'esri/geometry/Extent'
-import reactiveUtils from 'esri/core/reactiveUtils'
+// import reactiveUtils from 'esri/core/reactiveUtils'
 // import Geometry from 'esri/geometry/Geometry'
 // import FeatureLayer from 'esri/layers/FeatureLayer'
 import GraphicsLayer from 'esri/layers/GraphicsLayer'
 import Graphic from 'esri/Graphic'
-import FeatureLayer from 'esri/layers/FeatureLayer'
+// import FeatureLayer from 'esri/layers/FeatureLayer'
 import TileLayer from 'esri/layers/TileLayer'
 import MapView from 'esri/views/MapView'
 import SceneView from 'esri/views/SceneView'
-// import Graphic from 'esri/Graphic'
+import Color from 'esri/Color'
+import SimpleFillSymbol from 'esri/symbols/SimpleFillSymbol'
 // import PopupTemplate from 'esri/PopupTemplate'
 // import { h3ToGeoBoundary } from 'h3-js'
 import { useState, useEffect, useRef } from 'react'
 import { IMConfig } from '../config'
 import defaultMessages from './translations/default'
 import {
-  featurePopupTemplate,
-  graphicPopupTemplate,
-  simpleFillSymbol,
+  // featurePopupTemplate,
+  // graphicPopupTemplate,
+  // simpleFillSymbol,
   getGraphics,
-  getH3Counts,
-  translateGraphic,
+  // getH3Counts,
+  // translateGraphic,
   getDepthRange,
-  getPhylumCounts,
-  convertAndFormatCoordinates,
-  createLayer,
-  highlightFillSymbol
+  getPhylumCounts
+  // convertAndFormatCoordinates,
+  // createLayer,
+  // highlightFillSymbol
 } from '../h3-utils'
 
 const { useSelector } = ReactRedux
@@ -69,8 +70,10 @@ export default function H3Layer (props: AllWidgetProps<IMConfig>) {
   const tileLayer = new TileLayer({
     url: 'https://tiles.arcgis.com/tiles/C8EMgrsFcRFL6LrL/arcgis/rest/services/multibeam_mosaic_hillshade/MapServer'
   })
-  // TODO do not understand why cannot access h3 from useState
-  if (h3) { prevH3.current = h3 }
+  // TODO workaround to inexplicable inability to ready H3 from within mapClickHandler function
+  // if (h3) { prevH3.current = h3 }
+  console.log('setting previous to ', h3)
+  prevH3.current = h3
 
   // get state for this widget
   const widgetState = useSelector((state: IMState) => {
@@ -85,29 +88,56 @@ export default function H3Layer (props: AllWidgetProps<IMConfig>) {
   }, [widgetState?.queryParams])
 
   function deselectPreviousHexbin () {
-    if (prevH3.current) {
-      const prevGraphic = graphicsLayerRef.current.graphics.find((graphic) => {
-        return graphic.attributes.h3 === prevH3.current
-      })
-      prevGraphic.symbol = simpleFillSymbol
-    }
+    // if (prevH3.current) {
+    //   const prevGraphic = graphicsLayerRef.current.graphics.find((graphic) => {
+    //     return graphic.attributes.h3 === prevH3.current
+    //   })
+    //   toggleOutlineColor(prevGraphic)
+    // }
+    const stdColor = new Color('white')
+    // finds only the *first* highlighted graphic but there should only be 0 or 1
+    const highlightedGraphic = graphicsLayerRef.current.graphics.find(graphic => {
+      return stdColor.toHex() !== (graphic.symbol as SimpleFillSymbol).outline.color.toHex()
+    })
+    toggleOutlineColor(highlightedGraphic)
   }
 
   function highlightHexbin (graphic: Graphic) {
     deselectPreviousHexbin()
-    graphic.symbol = highlightFillSymbol
+    toggleOutlineColor(graphic)
     setH3(graphic.attributes.h3)
   }
 
+  function toggleOutlineColor (graphic: Graphic) {
+    if (!graphic) { return }
+    const stdColor = new Color('white')
+    const highlightColor = new Color('yellow')
+    const symbolCopy = graphic.symbol.toJSON()
+    if (stdColor.toHex() === graphic.symbol.outline.color.toHex()) {
+      symbolCopy.outline.color = highlightColor
+      symbolCopy.outline.width = 2
+    } else {
+      symbolCopy.outline.color = stdColor
+      symbolCopy.outline.width = 1
+    }
+    graphic.symbol = SimpleFillSymbol.fromJSON(symbolCopy)
+  }
+
   function mapClickHandler (hitTestResult) {
+    console.log('inside mapClickHander. H3: ', h3)
     const graphicHits = hitTestResult.results?.filter(hitResult => hitResult.layer.type === 'graphics')
+    console.log('inside mapClickHandler. graphicHits = ', graphicHits)
+    console.log(`inside hexbin: ${graphicHits.length === 1}; h3: ${graphicHits?.length && graphicHits[0].graphic.attributes.h3}; prev: ${prevH3.current}`)
     if (graphicHits?.length === 1 && graphicHits[0].graphic.attributes.h3 !== prevH3.current) {
+      console.log('within hexbin and new H3')
       highlightHexbin(graphicHits[0].graphic)
       getHexbinSummary(graphicHits[0].graphic.attributes)
     } else if (graphicHits?.length === 0) {
+      console.log('not inside hexbin')
       resetHexbinSummary()
       deselectPreviousHexbin()
     } else if (graphicHits?.length === 1) {
+      console.log('within same hexbin')
       console.debug('same hexbin clicked. no action necessary')
     } else {
       console.error('there should only be 0 or 1 graphics detected')
@@ -172,6 +202,7 @@ export default function H3Layer (props: AllWidgetProps<IMConfig>) {
     jmv.view.when(() => {
       jmv.view.map.add(graphicsLayer)
       jmv.view.on('click', (evt) => {
+        console.log('inside view click handler. H3: ', h3)
         try {
           jmv.view.hitTest(evt, opts).then(response => mapClickHandler(response))
         } catch (e) {

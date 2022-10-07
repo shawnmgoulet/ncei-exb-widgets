@@ -13,7 +13,6 @@ function helloWorld (name: string = 'World'): string {
   return `Hello ${name}!`
 }
 
-
 const featurePopupTemplate = new PopupTemplate({
   title: 'Feature Layer: {h3}',
   content: (event) => {
@@ -137,7 +136,7 @@ async function getDepthRange (h3, whereClause = '1=1') {
 async function getPhylumCounts (h3, whereClause = '1=1') {
   const startTime = new Date()
   // TODO derive from settings.tsx
-  const featureServiceUrl = 'https://services2.arcgis.com/C8EMgrsFcRFL6LrL/ArcGIS/rest/services/DSCRTP_NatDB_FeatureLayer/FeatureServer/0/query?'
+  const featureServiceUrl = 'https://services2.arcgis.com/C8EMgrsFcRFL6LrL/ArcGIS/rest/services/DSCRTP_NatDB_FeatureLayer/FeatureServer/0/query'
   const searchParams = new URLSearchParams()
   searchParams.set('where', `${whereClause} and h3_2='${h3}'`)
   // searchParams.set('outFields', 'Phylum')
@@ -194,6 +193,10 @@ function getSimpleFillSymbol(fillColor = [227, 139, 79, 0.2]) {
 
 async function getGraphics (whereClause = '1=1') {
   const data = await getH3Counts(whereClause)
+  if (!data) {
+    console.error('failed to retrieve hexbin counts - unable to draw layer')
+    return
+  }
   // would reduce() be more efficient?
   // const maxCount = data.reduce((prev, curr) => Math.max(prev, curr))
   // TODO use in color classification
@@ -205,7 +208,7 @@ async function getGraphics (whereClause = '1=1') {
   await classification.load()
   // console.log('breakpoints: ', classification.breakpoints)
   console.log(`${classification.numElements} elements with values ranging from ${classification.min} to ${classification.max} with an average of ${classification.average}`)
-  classification.printBinCounts()
+  // classification.printBinCounts()
 
   const hexagonGraphics = []
   data.forEach(element => {
