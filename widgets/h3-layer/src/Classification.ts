@@ -50,8 +50,6 @@ export class Classification {
   async load () {
     const breakpoints = await generateBuckets(this.bucketType, this.data, this.numClasses)
     this.breakpoints = breakpoints.map((it: number) => Math.round(it))
-    // would reduce() be more efficient?
-    // const this.max = data.reduce((prev, curr) => Math.max(prev, curr))
     this.min = Math.min(...this.data)
     this.max = Math.max(...this.data)
     this.numElements = this.data.length

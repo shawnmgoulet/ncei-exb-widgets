@@ -3,15 +3,11 @@ import Graphic from 'esri/Graphic'
 import webMercatorUtils from 'esri/geometry/support/webMercatorUtils'
 import Extent from 'esri/geometry/Extent'
 import PopupTemplate from 'esri/PopupTemplate'
-import SimpleFillSymbol from 'esri/symbols/SimpleFillSymbol'
-import jsonUtils from 'esri/symbols/support/jsonUtils'
 import { h3ToGeoBoundary } from 'h3-js'
-import WhereClause from 'esri/core/sql/WhereClause'
 import { Classification } from './Classification'
-
-function helloWorld (name: string = 'World'): string {
-  return `Hello ${name}!`
-}
+import Polygon from 'esri/geometry/Polygon'
+// TODO derive from settings.tsx
+const featureServiceUrl = 'https://services2.arcgis.com/C8EMgrsFcRFL6LrL/ArcGIS/rest/services/DSCRTP_NatDB_FeatureLayer/FeatureServer/0/query'
 
 const featurePopupTemplate = new PopupTemplate({
   title: 'Feature Layer: {h3}',
@@ -85,7 +81,6 @@ function translateGraphic (graphic) {
 
 async function getH3Counts (whereClause) {
   const startTime = new Date()
-  const featureServiceUrl = 'https://services2.arcgis.com/C8EMgrsFcRFL6LrL/ArcGIS/rest/services/DSCRTP_NatDB_FeatureLayer/FeatureServer/0/query?'
   const searchParams = new URLSearchParams()
   searchParams.set('where', whereClause)
   searchParams.set('outFields', 'h3_2')
@@ -110,7 +105,6 @@ async function getH3Counts (whereClause) {
 
 async function getDepthRange (h3, whereClause = '1=1') {
   const startTime = new Date()
-  const featureServiceUrl = 'https://services2.arcgis.com/C8EMgrsFcRFL6LrL/ArcGIS/rest/services/DSCRTP_NatDB_FeatureLayer/FeatureServer/0/query?'
   const searchParams = new URLSearchParams()
   searchParams.set('where', `${whereClause} and h3_2='${h3}'`)
   searchParams.set('outFields', 'DepthInMeters')
@@ -135,8 +129,6 @@ async function getDepthRange (h3, whereClause = '1=1') {
 
 async function getPhylumCounts (h3, whereClause = '1=1') {
   const startTime = new Date()
-  // TODO derive from settings.tsx
-  const featureServiceUrl = 'https://services2.arcgis.com/C8EMgrsFcRFL6LrL/ArcGIS/rest/services/DSCRTP_NatDB_FeatureLayer/FeatureServer/0/query'
   const searchParams = new URLSearchParams()
   searchParams.set('where', `${whereClause} and h3_2='${h3}'`)
   // searchParams.set('outFields', 'Phylum')
@@ -160,29 +152,11 @@ async function getPhylumCounts (h3, whereClause = '1=1') {
   return data.features.map(it => it.attributes)
 }
 
-const simpleFillSymbol = {
-  type: 'simple-fill',
-  color: [227, 139, 79, 0.2], // Orange, opacity 80%
-  outline: {
-    color: [255, 255, 255],
-    width: 1
-  }
-}
-
-const highlightFillSymbol = {
-  type: 'simple-fill',
-  color: [227, 139, 79, 0.2], // Orange, opacity 80%
-  outline: {
-    color: [255, 255, 0],
-    width: 2
-  }
-}
-
-function getSimpleFillSymbol(fillColor = [227, 139, 79, 0.2]) {
+function getSimpleFillSymbol (fillColor = [227, 139, 79, 0.2]) {
   // default to Orange, opacity 80%
   // var randomColor = Math.floor(Math.random()*16777215).toString(16);
   return {
-    type: "simple-fill",
+    type: 'simple-fill',
     color: fillColor,
     outline: {
       color: [255, 255, 255],
@@ -197,27 +171,20 @@ async function getGraphics (whereClause = '1=1') {
     console.error('failed to retrieve hexbin counts - unable to draw layer')
     return
   }
-  // would reduce() be more efficient?
-  // const maxCount = data.reduce((prev, curr) => Math.max(prev, curr))
-  // TODO use in color classification
-  // const minCount = Math.min(...data.map(it => it.Count))
-  // const maxCount = Math.max(...data.map(it => it.Count))
-  // console.log(`bin counts range from ${minCount} to ${maxCount}`)
   // 4 classes == 5 bins
   const classification = new Classification({ bucketType: 'QNT', data: data.map(it => it.Count), numClasses: 4 })
   await classification.load()
-  // console.log('breakpoints: ', classification.breakpoints)
   console.log(`${classification.numElements} elements with values ranging from ${classification.min} to ${classification.max} with an average of ${classification.average}`)
+  // console.log('breakpoints: ', classification.breakpoints)
   // classification.printBinCounts()
 
   const hexagonGraphics = []
   data.forEach(element => {
     // console.log(element.h3_2, element.Count )
     const hexGraphic = new Graphic({
-      geometry: {
-        type: 'polygon',
-        rings: h3ToGeoBoundary(element.h3_2, true)
-      },
+      geometry: new Polygon({
+        rings: [h3ToGeoBoundary(element.h3_2, true)]
+      }),
       attributes: {
         h3: element.h3_2,
         count: element.Count
@@ -231,8 +198,6 @@ async function getGraphics (whereClause = '1=1') {
     hexagonGraphics.push(hexGraphic)
   })
 
-  // graphicsLayer.removeAll()
-  // graphicsLayer.graphics.addMany(hexagonGraphics)
   return hexagonGraphics
 }
 
@@ -248,13 +213,11 @@ function convertAndFormatCoordinates (coords, dp: number = 5) {
 export {
   featurePopupTemplate,
   graphicPopupTemplate,
-  simpleFillSymbol,
   getGraphics,
   getH3Counts,
   translateGraphic,
   getDepthRange,
   getPhylumCounts,
   convertAndFormatCoordinates,
-  createLayer,
-  highlightFillSymbol
+  createLayer
 }
