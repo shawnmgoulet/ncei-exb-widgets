@@ -21,11 +21,30 @@ import { AllWidgetProps, React, IMState, ReactRedux, appActions, getAppStore, Da
 import { JimuMapView, JimuMapViewComponent } from 'jimu-arcgis'
 import { IMConfig } from '../config'
 import defaultMessages from './translations/default'
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 const { useSelector } = ReactRedux
 
 export default function Widget (props: AllWidgetProps<IMConfig>) {
+  console.log('inside toggle-sidebar. sidebar = ', props.config.sidebarWidgetId)
   const pointLayerTitle = useRef('no DataSource set')
+
+  const [appWidgets, setAppWidgets] = useState({} as Object)
+
+  // Update the appWidgets property once, on page load
+  useEffect(() => {
+    const widgets = getAppStore().getState().appConfig.widgets
+    setAppWidgets(widgets)
+  }, [])
+
+  // useEffect(() => {
+  //   if (appWidgets) {
+  //     const widgetsArray = Object.values(appWidgets)
+  //     console.log(widgetsArray)
+  //     widgetsArray.forEach(w => {
+  //       console.log(w.id, w.uri)
+  //     })
+  //   }
+  // }, [appWidgets])
 
   const isDsConfigured = () => {
     return props.useDataSources && props.useDataSources.length === 1
@@ -69,7 +88,8 @@ export default function Widget (props: AllWidgetProps<IMConfig>) {
     jmv.view.on('click', (evt) => {
       jmv.view.hitTest(evt).then((response) => {
         const coralHits = response.results?.filter(hitResult => hitResult.layer.title === pointLayerTitle.current)
-        if (coralHits.length) {
+        const graphicHits = response.results?.filter(hitResult => hitResult.layer.type === 'graphics')
+        if (coralHits.length || graphicHits.length) {
           handleExpandSidebar()
         }
       })
