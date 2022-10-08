@@ -24,13 +24,12 @@ import { JimuMapView, JimuMapViewComponent } from 'jimu-arcgis'
 import GraphicsLayer from 'esri/layers/GraphicsLayer'
 import Graphic from 'esri/Graphic'
 import TileLayer from 'esri/layers/TileLayer'
-import MapView from 'esri/views/MapView'
-import SceneView from 'esri/views/SceneView'
+// import MapView from 'esri/views/MapView'
 import Color from 'esri/Color'
 import SimpleFillSymbol from 'esri/symbols/SimpleFillSymbol'
 import { useState, useEffect, useRef } from 'react'
 import { IMConfig } from '../config'
-import defaultMessages from './translations/default'
+// import defaultMessages from './translations/default'
 import {
   getGraphics,
   getDepthRange,
@@ -85,8 +84,7 @@ export default function H3Layer (props: AllWidgetProps<IMConfig>) {
 
   function toggleOutlineColor (graphic: Graphic) {
     if (!graphic) { return }
-    // const symbolCopy = graphic.symbol.toJSON()
-    const symbolCopy = graphic.symbol.clone()
+    const symbolCopy = (graphic.symbol as SimpleFillSymbol).clone()
 
     if (stdColor.toHex() === graphic.symbol.outline.color.toHex()) {
       symbolCopy.outline.color = highlightColor
