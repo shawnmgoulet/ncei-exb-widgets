@@ -152,7 +152,7 @@ async function getPhylumCounts (h3, whereClause = '1=1') {
   return data.features.map(it => it.attributes)
 }
 
-function getSimpleFillSymbol (fillColor = [227, 139, 79, 0.2]) {
+function getSimpleFillSymbol (fillColor = [227, 139, 79, 0.8]) {
   // default to Orange, opacity 80%
   // var randomColor = Math.floor(Math.random()*16777215).toString(16);
   return {
@@ -172,7 +172,7 @@ async function getGraphics (whereClause = '1=1') {
     return
   }
   // 4 classes == 5 bins
-  const classification = new Classification({ bucketType: 'QNT', data: data.map(it => it.Count), numClasses: 4 })
+  const classification = new Classification({ bucketType: 'QNT', data: data.map(it => it.Count), numClasses: 4, transparency: 0.5 })
   await classification.load()
   console.log(`${classification.numElements} elements with values ranging from ${classification.min} to ${classification.max} with an average of ${classification.average}`)
   // console.log('breakpoints: ', classification.breakpoints)
