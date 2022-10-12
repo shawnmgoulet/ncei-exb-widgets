@@ -35,6 +35,7 @@ import {
   getDepthRange,
   getPhylumCounts
 } from '../h3-utils'
+import { Button } from 'jimu-ui'
 
 const { useSelector } = ReactRedux
 
@@ -61,6 +62,10 @@ export default function H3Layer (props: AllWidgetProps<IMConfig>) {
     return state.widgetsState[props.widgetId]
   })
   queryParamsRef.current = widgetState?.queryParams
+
+  useEffect(() => {
+    console.log(`inside useEffect: h3 = ${h3}; queryParams = ${widgetState?.queryParams}`)
+  })
 
   useEffect(() => {
     console.debug('queryParams changed, updating graphics layer: ', widgetState?.queryParams)
@@ -93,7 +98,6 @@ export default function H3Layer (props: AllWidgetProps<IMConfig>) {
       symbolCopy.outline.color = stdColor
       symbolCopy.outline.width = 1
     }
-    // graphic.symbol = SimpleFillSymbol.fromJSON(symbolCopy)
     graphic.symbol = symbolCopy
   }
 
@@ -218,6 +222,10 @@ export default function H3Layer (props: AllWidgetProps<IMConfig>) {
     )
   }
 
+  function testBtnClickHandler (evt: React.MouseEvent<HTMLElement>) {
+    alert(`h3 = ${h3}. queryParams = ${widgetState?.queryParams}`)
+  }
+
   return (
     <div>
       {h3 ? formatHexbinSummary() : <p>Please select a hexbin...</p>}
@@ -226,6 +234,7 @@ export default function H3Layer (props: AllWidgetProps<IMConfig>) {
         onActiveViewChange={activeViewChangeHandler}
       />
       {/* <p>Layer name: {layerName || 'layer name required'}</p> */}
+      <Button onClick={testBtnClickHandler}>Click Me</Button>
     </div>
 
   )
