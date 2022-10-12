@@ -180,6 +180,7 @@ export default function H3Layer (props: AllWidgetProps<IMConfig>) {
       jmv.view.on('click', (evt) => {
         try {
           jmv.view.hitTest(evt, opts).then(response => mapClickHandler(response))
+          testBtnClickHandler(evt)
         } catch (e) {
           // TODO not catching errors in identify operation
           console.error('hitTest failed: ', e)
