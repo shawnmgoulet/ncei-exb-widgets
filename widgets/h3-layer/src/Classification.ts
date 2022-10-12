@@ -6,37 +6,36 @@ interface ClassificationProps {
   bucketType?: BucketTypeCode
   numClasses?: number
   data: number[]
-  colors?: string[]
+  colors?: number[][]
   transparency?: number
 }
 
 export class Classification {
   bucketType: BucketTypeCode
-  numClasses
+  numClasses: number
   ready = false
   data: number[]
   // always one more breakpoint than numClasses
-  breakpoints: number[] = []
-  transparency: number = 0.2
-  colors: number[][] = [
-    [255, 255, 178, this.transparency],
-    [254, 204, 92, this.transparency],
-    [253, 141, 60, this.transparency],
-    [240, 59, 32, this.transparency],
-    [189, 0, 38, this.transparency]
-  ]
-
+  breakpoints: number[]
+  transparency: number
+  colors: number[][]
   min: number = 0
-
   max: number = 0
-
   average: number = 0
   numElements: number = 0
 
   constructor (props: ClassificationProps) {
     this.bucketType = props.bucketType ?? 'EQI'
     this.numClasses = props.numClasses ?? 5
-    if (props.data && props.data.length > 2) {
+    this.transparency = props.transparency ?? 0.2
+    this.colors = props.colors ?? [
+      [255, 255, 178, this.transparency],
+      [254, 204, 92, this.transparency],
+      [253, 141, 60, this.transparency],
+      [240, 59, 32, this.transparency],
+      [189, 0, 38, this.transparency]
+    ]
+    if (props.data) {
       this.data = props.data
       // console.log(this.data.sort())
     } else {
@@ -48,8 +47,10 @@ export class Classification {
   }
 
   async load () {
-    const breakpoints = await generateBuckets(this.bucketType, this.data, this.numClasses)
-    this.breakpoints = breakpoints.map((it: number) => Math.round(it))
+    if (this.numClasses < this.data.length) {
+      const breakpoints = await generateBuckets(this.bucketType, this.data, this.numClasses)
+      this.breakpoints = breakpoints.map((it: number) => Math.round(it))        
+    }
     this.min = Math.min(...this.data)
     this.max = Math.max(...this.data)
     this.numElements = this.data.length
@@ -59,6 +60,10 @@ export class Classification {
 
   getColor (value: number) {
     if (!this.ready) { throw new Error('not yet initialized') }
+    if (!this.breakpoints) {
+      // when there is not enough data points to create classification, return minimum color (bucket) as default
+      return this.colors[0]
+    }
     for (const [idx, breakpoint] of this.breakpoints.entries()) {
       if (value <= breakpoint) {
         return this.colors[idx]
@@ -68,6 +73,10 @@ export class Classification {
   }
 
   printBinCounts () {
+    if (!this.breakpoints) {
+      console.log(` ${this.data.length} is not enough data points to produce a classification.`)
+      return
+    }
     const counts = new Array(this.numClasses + 1).fill(0)
     this.data.forEach(value => {
       const idx = this.getBreakpointIndex(value)
