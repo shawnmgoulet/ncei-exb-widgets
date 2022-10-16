@@ -9,6 +9,9 @@
  * 2) filter changes (i.e. DataSource queryParams)
  * this requires that the graphics layer be updated (both boundaries and symbology)
  *
+ * Both are handled (indirectly) via respective useEffect hooks, i.e.
+ * event changes state -> triggers re-render -> useEffect runs
+ *
  * Note that if a individual hexbin was selected at the time the queryParams
  * change, it will be deselected and the summary cleared. This is necessary
  * since a change in queryParams may cause a hexbin which was formerly displayed
@@ -24,38 +27,32 @@ import { JimuMapView, JimuMapViewComponent } from 'jimu-arcgis'
 import GraphicsLayer from 'esri/layers/GraphicsLayer'
 import Graphic from 'esri/Graphic'
 import TileLayer from 'esri/layers/TileLayer'
-// import MapView from 'esri/views/MapView'
-import Color from 'esri/Color'
-import SimpleFillSymbol from 'esri/symbols/SimpleFillSymbol'
 import { useState, useEffect, useRef } from 'react'
 import { IMConfig } from '../config'
 // import defaultMessages from './translations/default'
 import {
   getGraphics,
   getDepthRange,
-  getPhylumCounts
+  getPhylumCounts,
+  toggleOutlineColor,
+  getHighlightedGraphic
 } from '../h3-utils'
-import { Button } from 'jimu-ui'
 
 const { useSelector } = ReactRedux
 
 export default function H3Layer (props: AllWidgetProps<IMConfig>) {
-  // const [view, setView] = useState<MapView|SceneView>(null)
   const graphicsLayerRef = useRef<GraphicsLayer>()
-  const [pointCount, setPointCount] = useState<number>(0)
-  const prevH3 = useRef()
-  const [h3, setH3] = useState(null)
+  const [selectedGraphic, setSelectedGraphic] = useState<Graphic|null>(null)
   const [depthRange, setDepthRange] = useState(null)
   const [phylumCounts, setPhylumCounts] = useState(null)
   const queryParamsRef = useRef(null)
-  // const layerName = props.config?.layerName ? props.config.layerName : 'layer name not set'
-  const stdColor = new Color('white')
-  const highlightColor = new Color('yellow')
   const tileLayer = new TileLayer({
     url: 'https://tiles.arcgis.com/tiles/C8EMgrsFcRFL6LrL/arcgis/rest/services/multibeam_mosaic_hillshade/MapServer'
   })
-  // TODO workaround to inexplicable inability to ready H3 from within mapClickHandler function
-  prevH3.current = h3
+
+  // for convenience in JSX. cannot destruct from object because selectedGraphic may be null
+  const h3 = selectedGraphic?.attributes.h3
+  const pointCount = selectedGraphic?.attributes.count
 
   // get state for this widget
   const widgetState = useSelector((state: IMState) => {
@@ -63,94 +60,78 @@ export default function H3Layer (props: AllWidgetProps<IMConfig>) {
   })
   queryParamsRef.current = widgetState?.queryParams
 
-  useEffect(() => {
-    console.log(`inside useEffect: h3 = ${h3}; queryParams = ${widgetState?.queryParams}`)
-  })
+  console.log(`re-rendering H3Layer. h3 = ${h3}; queryParams = ${widgetState?.queryParams}`)
 
   useEffect(() => {
-    console.debug('queryParams changed, updating graphics layer: ', widgetState?.queryParams)
+    console.log('queryParams changed, updating graphics layer: ', widgetState?.queryParams)
     resetHexbinSummary()
-    updateGraphicsLayer()
+    if (!graphicsLayerRef.current) {
+      console.warn('GraphicsLayer not yet available')
+      return
+    }
+
+    getGraphics(widgetState?.queryParams).then(graphics => {
+      graphicsLayerRef.current.removeAll()
+      graphicsLayerRef.current.graphics.addMany(graphics)
+    })
   }, [widgetState?.queryParams])
 
-  function deselectPreviousHexbin () {
-    // finds only the *first* highlighted graphic but there should only be 0 or 1
-    const highlightedGraphic = graphicsLayerRef.current.graphics.find(graphic => {
-      return stdColor.toHex() !== (graphic.symbol as SimpleFillSymbol).outline.color.toHex()
-    })
-    toggleOutlineColor(highlightedGraphic)
-  }
+  useEffect(() => {
+    if (selectedGraphic) {
+      const h3 = selectedGraphic.attributes.h3
+      console.log('selected hexbin changed: ', h3)
+      deselectPreviousHexbin()
+      toggleOutlineColor(selectedGraphic)
 
-  function highlightHexbin (graphic: Graphic) {
-    deselectPreviousHexbin()
-    toggleOutlineColor(graphic)
-    setH3(graphic.attributes.h3)
-  }
+      // reset hexbin summary
+      setDepthRange(null)
+      setPhylumCounts(null)
 
-  function toggleOutlineColor (graphic: Graphic) {
-    if (!graphic) { return }
-    const symbolCopy = (graphic.symbol as SimpleFillSymbol).clone()
+      // use queryParamsRef to avoid having to add widgetState.queryParams to dependency array
+      const whereClause = queryParamsRef.current || '1=1'
 
-    if (stdColor.toHex() === graphic.symbol.outline.color.toHex()) {
-      symbolCopy.outline.color = highlightColor
-      symbolCopy.outline.width = 2
+      // TODO group these in a Promise.all() and store hexbin summary in a single state variable
+      getDepthRange(h3, whereClause)
+        .then(results => {
+          setDepthRange(results)
+        })
+      getPhylumCounts(h3, whereClause)
+        .then(results => {
+          setPhylumCounts(results)
+        })
     } else {
-      symbolCopy.outline.color = stdColor
-      symbolCopy.outline.width = 1
-    }
-    graphic.symbol = symbolCopy
-  }
-
-  function mapClickHandler (hitTestResult) {
-    // TODO why is h3 useState variable not visible here?
-    const graphicHits = hitTestResult.results?.filter(hitResult => hitResult.layer.type === 'graphics')
-    // avoid expensive hexbin summary queries if selected hexbin clicked
-    if (graphicHits?.length === 1 && graphicHits[0].graphic.attributes.h3 !== prevH3.current) {
-      console.log('new hexbin clicked, highlight and get summary information')
-      highlightHexbin(graphicHits[0].graphic)
-      getHexbinSummary(graphicHits[0].graphic.attributes)
-    } else if (graphicHits?.length === 0) {
-      console.log('not inside hexbin')
+      console.log('no selected hexbin...')
       resetHexbinSummary()
       deselectPreviousHexbin()
-    } else if (graphicHits?.length === 1) {
-      console.debug('same hexbin clicked. no action necessary')
+    }
+  }, [selectedGraphic])
+
+  function mapClickHandler (hitTestResult) {
+    const graphicHits = hitTestResult.results?.filter(hitResult => hitResult.layer.type === 'graphics')
+    if (graphicHits?.length === 1) {
+      // console.log('hexbin clicked: ', graphicHits[0].graphic.attributes.h3)
+      setSelectedGraphic(graphicHits[0].graphic)
+    } else if (graphicHits?.length === 0) {
+      // console.log('outside hexbin')
+      setSelectedGraphic(null)
     } else {
       console.error('there should only be 0 or 1 graphics detected')
     }
   }
 
-  function getHexbinSummary (hexbinAttributes) {
-    // TODO why is widgetState.queryParams always undefined here?
-    const whereClause = queryParamsRef.current || '1=1'
-    const h3 = hexbinAttributes.h3
-    setPointCount(hexbinAttributes.count)
-    // TODO group these in a Promise.all() and store hexbin summary in a single state variable
-    getDepthRange(h3, whereClause)
-      .then(results => {
-        setDepthRange(results)
-      })
-    getPhylumCounts(h3, whereClause)
-      .then(results => {
-        setPhylumCounts(results)
-      })
+  function deselectPreviousHexbin () {
+    // finds only the *first* highlighted graphic but there should only be 0 or 1
+    const highlightedGraphic = getHighlightedGraphic(graphicsLayerRef.current)
+    if (highlightedGraphic) {
+      toggleOutlineColor(highlightedGraphic)
+    }
   }
 
   function resetHexbinSummary () {
-    setH3(null)
-    setPointCount(0)
+    // setH3(null)
+    // setPointCount(0)
     setDepthRange(null)
     setPhylumCounts(null)
-  }
-
-  async function updateGraphicsLayer () {
-    if (!graphicsLayerRef.current) {
-      console.warn('GraphicsLayer not yet available')
-      return
-    }
-    const graphicsAllFeatures = await getGraphics(widgetState?.queryParams)
-    graphicsLayerRef.current.removeAll()
-    graphicsLayerRef.current.graphics.addMany(graphicsAllFeatures)
   }
 
   const activeViewChangeHandler = (jmv: JimuMapView) => {
@@ -158,11 +139,6 @@ export default function H3Layer (props: AllWidgetProps<IMConfig>) {
       console.warn('no MapView')
       return
     }
-    // setView(jmv.view)
-
-    // jmv.view.on('layerview-create', (event) => {
-    //   console.log(`LayerView for ${event.layer.title} (${event.layer.id}) created`, widgetState?.queryParams)
-    // })
 
     const graphicsLayer = new GraphicsLayer({
       title: 'Hexbins',
@@ -177,27 +153,15 @@ export default function H3Layer (props: AllWidgetProps<IMConfig>) {
 
     jmv.view.when(() => {
       jmv.view.map.add(graphicsLayer)
-      jmv.view.on('click', (evt) => {
-        try {
-          jmv.view.hitTest(evt, opts).then(response => mapClickHandler(response))
-          testBtnClickHandler(evt)
-        } catch (e) {
-          // TODO not catching errors in identify operation
-          console.error('hitTest failed: ', e)
-        }
+      // queryParams not needed since initial draw is for all features
+      getGraphics().then(graphics => {
+        graphicsLayerRef.current.removeAll()
+        graphicsLayerRef.current.graphics.addMany(graphics)
       })
-    }).then(async () => {
-      updateGraphicsLayer()
-      // TODO try using FeatureLayer instead of Graphics Layer
-      // const featureLayer: FeatureLayer = createLayer(graphicsAllFeatures)
-      // featureLayer.watch('loadStatus', () => console.log(`featureLayer loadStatus changed to ${featureLayer.loadStatus}...`))
-      // jmv.view.whenLayerView(featureLayer).then(function(layerView){
-      //   layerView.watch("updating", function(value){
-      //     console.log(`featureLayer: ${value}`)
-      //   })
-      // })
-      // featureLayer.popupTemplate = featurePopupTemplate
-      // jmv.view.map.add(featureLayer)
+
+      jmv.view.on('click', (evt) => {
+        jmv.view.hitTest(evt, opts).then(response => mapClickHandler(response))
+      })
     })
   }
 
@@ -207,6 +171,7 @@ export default function H3Layer (props: AllWidgetProps<IMConfig>) {
       {/* <p>Extent: {widgetState?.extent ? convertAndFormatCoordinates(widgetState.extent, 3) : ''}</p> */}
       {/* <p>Filter: {widgetState?.queryParams ? widgetState.queryParams : 'none'}</p> */}
       <p>Hexbin {h3} has {pointCount.toLocaleString()} sample(s)</p>
+      {depthRange && phylumCounts ? '' : 'gathering summary information...'}
       {depthRange
         ? <p>depths range from {depthRange.MinDepth} to {depthRange.MaxDepth}</p>
         : ''
@@ -223,10 +188,6 @@ export default function H3Layer (props: AllWidgetProps<IMConfig>) {
     )
   }
 
-  function testBtnClickHandler (evt: React.MouseEvent<HTMLElement>) {
-    alert(`h3 = ${h3}. queryParams = ${widgetState?.queryParams}`)
-  }
-
   return (
     <div>
       {h3 ? formatHexbinSummary() : <p>Please select a hexbin...</p>}
@@ -234,8 +195,6 @@ export default function H3Layer (props: AllWidgetProps<IMConfig>) {
         useMapWidgetId={props.useMapWidgetIds?.[0]}
         onActiveViewChange={activeViewChangeHandler}
       />
-      {/* <p>Layer name: {layerName || 'layer name required'}</p> */}
-      <Button onClick={testBtnClickHandler}>Click Me</Button>
     </div>
 
   )

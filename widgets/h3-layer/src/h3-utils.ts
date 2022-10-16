@@ -1,13 +1,29 @@
 import FeatureLayer from 'esri/layers/FeatureLayer'
+import GraphicsLayer from 'esri/layers/GraphicsLayer'
 import Graphic from 'esri/Graphic'
+import SimpleFillSymbol from 'esri/symbols/SimpleFillSymbol'
 import webMercatorUtils from 'esri/geometry/support/webMercatorUtils'
 import Extent from 'esri/geometry/Extent'
 import PopupTemplate from 'esri/PopupTemplate'
 import { h3ToGeoBoundary } from 'h3-js'
 import { Classification } from './Classification'
 import Polygon from 'esri/geometry/Polygon'
+import Color from 'esri/Color'
+
 // TODO derive from settings.tsx
 const featureServiceUrl = 'https://services2.arcgis.com/C8EMgrsFcRFL6LrL/ArcGIS/rest/services/DSCRTP_NatDB_FeatureLayer/FeatureServer/0/query'
+const stdColor = new Color('white')
+const highlightColor = new Color('yellow')
+
+function getHighlightedGraphic (graphicsLayer: GraphicsLayer) {
+  if (!graphicsLayer) {
+    return
+  }
+  // finds only the *first* highlighted graphic but there should only be 0 or 1
+  return graphicsLayer.graphics.find(graphic => {
+    return stdColor.toHex() !== (graphic.symbol as SimpleFillSymbol).outline.color.toHex()
+  })
+}
 
 const featurePopupTemplate = new PopupTemplate({
   title: 'Feature Layer: {h3}',
@@ -79,7 +95,23 @@ function translateGraphic (graphic) {
   graphic.geometry.rings = [shiftedRings]
 }
 
+function toggleOutlineColor (graphic: Graphic) {
+  if (!graphic) { return }
+  const symbolCopy = (graphic.symbol as SimpleFillSymbol).clone()
+
+  if (stdColor.toHex() === graphic.symbol.outline.color.toHex()) {
+    symbolCopy.outline.color = highlightColor
+    symbolCopy.outline.width = 2
+  } else {
+    symbolCopy.outline.color = stdColor
+    symbolCopy.outline.width = 1
+  }
+  graphic.symbol = symbolCopy
+}
+
 async function getH3Counts (whereClause) {
+  let returnExceededLimitFeatures = true
+  let results = []
   const startTime = new Date()
   const searchParams = new URLSearchParams()
   searchParams.set('where', whereClause)
@@ -87,8 +119,26 @@ async function getH3Counts (whereClause) {
   searchParams.set('groupByFieldsForStatistics', 'h3_2')
   searchParams.set('outStatistics', '[{"statisticType":"count","onStatisticField":"h3_2","outStatisticFieldName":"Count"}]')
   searchParams.set('returnGeometry', 'false')
+  searchParams.set('resultOffset', results.length.toString())
+  searchParams.set('returnExceededLimitFeatures', true.toString())
   searchParams.set('f', 'json')
 
+  while (returnExceededLimitFeatures) {
+    const data = await makeH3Request(searchParams)
+    results = results.concat(data.features.map(it => it.attributes))
+    if (data.exceededTransferLimit) {
+      searchParams.set('resultOffset', results.length.toString())
+    } else {
+      returnExceededLimitFeatures = false
+    }
+  }
+
+  const endTime = new Date()
+  console.log(`retrieved ${results.length} records in ${(endTime.getTime() - startTime.getTime()) / 1000} seconds`)
+  return results
+}
+
+async function makeH3Request (searchParams: URLSearchParams) {
   const response = await fetch(featureServiceUrl, {
     method: 'POST',
     body: searchParams
@@ -97,10 +147,7 @@ async function getH3Counts (whereClause) {
     console.warn('Error fetching data from: ' + featureServiceUrl)
     return
   }
-  const data = await response.json()
-  const endTime = new Date()
-  console.debug(`retrieved ${data.features.length} records in ${(endTime.getTime() - startTime.getTime()) / 1000} seconds`)
-  return data.features.map(it => it.attributes)
+  return (await response.json())
 }
 
 async function getDepthRange (h3, whereClause = '1=1') {
@@ -219,5 +266,9 @@ export {
   getDepthRange,
   getPhylumCounts,
   convertAndFormatCoordinates,
-  createLayer
+  createLayer,
+  toggleOutlineColor,
+  stdColor,
+  highlightColor,
+  getHighlightedGraphic
 }
