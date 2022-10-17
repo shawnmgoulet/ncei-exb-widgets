@@ -92,7 +92,7 @@ export default function Widget (props: AllWidgetProps<IMConfig>) {
         const graphicHits = response.results?.filter(hitResult => hitResult.layer.type === 'graphics')
         if (coralHits.length || graphicHits.length) {
           handleExpandSidebar()
-          browserHistory.setView('section_2', 'view_5')
+          browserHistory.changeView('section_2', 'view_5')
         }
       })
     })
