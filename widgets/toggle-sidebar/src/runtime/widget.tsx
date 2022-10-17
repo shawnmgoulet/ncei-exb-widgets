@@ -17,15 +17,16 @@
   A copy of the license is available in the repository's
   LICENSE file.
 */
-import { AllWidgetProps, React, IMState, ReactRedux, appActions, getAppStore, DataSourceManager, DataSourceComponent } from 'jimu-core'
+import { AllWidgetProps, React, IMState, ReactRedux, appActions, getAppStore, DataSourceManager, DataSourceComponent, browserHistory } from 'jimu-core'
 import { JimuMapView, JimuMapViewComponent } from 'jimu-arcgis'
 import { IMConfig } from '../config'
 import defaultMessages from './translations/default'
 import { useState, useRef, useEffect } from 'react'
+
 const { useSelector } = ReactRedux
 
 export default function Widget (props: AllWidgetProps<IMConfig>) {
-  console.log('inside toggle-sidebar. sidebar = ', props.config.sidebarWidgetId)
+  // console.log('inside toggle-sidebar. sidebar = ', props.config.sidebarWidgetId)
   const pointLayerTitle = useRef('no DataSource set')
 
   const [appWidgets, setAppWidgets] = useState({} as Object)
@@ -91,6 +92,7 @@ export default function Widget (props: AllWidgetProps<IMConfig>) {
         const graphicHits = response.results?.filter(hitResult => hitResult.layer.type === 'graphics')
         if (coralHits.length || graphicHits.length) {
           handleExpandSidebar()
+          browserHistory.setView('section_2', 'view_5')
         }
       })
     })
