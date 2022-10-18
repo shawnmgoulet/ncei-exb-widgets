@@ -15,6 +15,9 @@ const featureServiceUrl = 'https://services2.arcgis.com/C8EMgrsFcRFL6LrL/ArcGIS/
 const stdColor = new Color('white')
 const highlightColor = new Color('yellow')
 
+// cache the h3 counts when there are no filters applied
+let noFiltersH3Counts = null
+
 function getHighlightedGraphic (graphicsLayer: GraphicsLayer) {
   if (!graphicsLayer) {
     return
@@ -109,7 +112,13 @@ function toggleOutlineColor (graphic: Graphic) {
   graphic.symbol = symbolCopy
 }
 
-async function getH3Counts (whereClause) {
+async function getH3Counts (whereClause: string) {
+  // return cached results
+  if ((whereClause === '1=1' || !whereClause) && noFiltersH3Counts) {
+    console.log('returning results from cache...')
+    return noFiltersH3Counts
+  }
+
   let returnExceededLimitFeatures = true
   let results = []
   const startTime = new Date()
@@ -135,6 +144,9 @@ async function getH3Counts (whereClause) {
 
   const endTime = new Date()
   console.log(`retrieved ${results.length} records in ${(endTime.getTime() - startTime.getTime()) / 1000} seconds`)
+  if ((whereClause === '1=1' || !whereClause) && !noFiltersH3Counts) {
+    noFiltersH3Counts = results
+  }
   return results
 }
 
