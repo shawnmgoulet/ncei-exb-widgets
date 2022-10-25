@@ -35,16 +35,33 @@ import {
   getDepthRange,
   getPhylumCounts,
   toggleOutlineColor,
-  getHighlightedGraphic
+  getHighlightedGraphic,
+  getSpeciesCount
 } from '../h3-utils'
 
 const { useSelector } = ReactRedux
 
+interface HexbinSummary {
+  minDepth: number
+  maxDepth: number
+  phylumCounts: PhylumCount[]
+  speciesCount: SpeciesCount
+}
+
+interface PhylumCount {
+  Count: number
+  Phylum: string
+}
+
+interface SpeciesCount {
+  rawCount: number
+  normalizedCount: number
+}
+
 export default function H3Layer (props: AllWidgetProps<IMConfig>) {
   const graphicsLayerRef = useRef<GraphicsLayer>()
   const [selectedGraphic, setSelectedGraphic] = useState<Graphic|null>(null)
-  const [depthRange, setDepthRange] = useState(null)
-  const [phylumCounts, setPhylumCounts] = useState(null)
+  const [hexbinSummary, setHexbinSummary] = useState<HexbinSummary>()
   const queryParamsRef = useRef(null)
   const tileLayer = new TileLayer({
     url: 'https://tiles.arcgis.com/tiles/C8EMgrsFcRFL6LrL/arcgis/rest/services/multibeam_mosaic_hillshade/MapServer'
@@ -60,7 +77,7 @@ export default function H3Layer (props: AllWidgetProps<IMConfig>) {
   })
   queryParamsRef.current = widgetState?.queryParams
 
-  console.log(`re-rendering H3Layer. h3 = ${h3}; queryParams = ${widgetState?.queryParams}`)
+  // console.log(`re-rendering H3Layer. h3 = ${h3}; queryParams = ${widgetState?.queryParams}`)
 
   useEffect(() => {
     console.log('queryParams changed, updating graphics layer: ', widgetState?.queryParams)
@@ -84,21 +101,25 @@ export default function H3Layer (props: AllWidgetProps<IMConfig>) {
       toggleOutlineColor(selectedGraphic)
 
       // reset hexbin summary
-      setDepthRange(null)
-      setPhylumCounts(null)
+      setHexbinSummary(null)
 
       // use queryParamsRef to avoid having to add widgetState.queryParams to dependency array
       const whereClause = queryParamsRef.current || '1=1'
 
       // TODO group these in a Promise.all() and store hexbin summary in a single state variable
-      getDepthRange(h3, whereClause)
-        .then(results => {
-          setDepthRange(results)
+      Promise.all([
+        getDepthRange(h3, whereClause),
+        getPhylumCounts(h3, whereClause),
+        getSpeciesCount(h3, whereClause)
+      ]).then(([depthRange, phylumCounts, speciesCount]) => {
+        setHexbinSummary({
+          minDepth: depthRange.MinDepth,
+          maxDepth: depthRange.MaxDepth,
+          phylumCounts,
+          speciesCount
         })
-      getPhylumCounts(h3, whereClause)
-        .then(results => {
-          setPhylumCounts(results)
-        })
+        console.log('promises completed: ', depthRange, phylumCounts, speciesCount)
+      })
     } else {
       console.log('no selected hexbin...')
       resetHexbinSummary()
@@ -128,10 +149,8 @@ export default function H3Layer (props: AllWidgetProps<IMConfig>) {
   }
 
   function resetHexbinSummary () {
-    // setH3(null)
-    // setPointCount(0)
-    setDepthRange(null)
-    setPhylumCounts(null)
+    setSelectedGraphic(null)
+    setHexbinSummary(null)
   }
 
   const activeViewChangeHandler = (jmv: JimuMapView) => {
@@ -171,19 +190,21 @@ export default function H3Layer (props: AllWidgetProps<IMConfig>) {
       {/* <p>Extent: {widgetState?.extent ? convertAndFormatCoordinates(widgetState.extent, 3) : ''}</p> */}
       {/* <p>Filter: {widgetState?.queryParams ? widgetState.queryParams : 'none'}</p> */}
       <p>Hexbin {h3} has {pointCount.toLocaleString()} sample(s)</p>
-      {depthRange && phylumCounts ? '' : 'gathering summary information...'}
-      {depthRange
-        ? <p>depths range from {depthRange.MinDepth} to {depthRange.MaxDepth}</p>
-        : ''
-      }
-      {phylumCounts
+
+      {hexbinSummary
         ? <div>
-        <p>Phylum Counts:</p>
-        <ul>
-          {phylumCounts.map(el => { return <li>{el.Phylum}: {el.Count}</li> })}
-        </ul>
-      </div>
-        : '' }
+            <p>depths range from {hexbinSummary.minDepth} to {hexbinSummary.maxDepth}</p>
+            <div>
+              <p>Phylum Counts:</p>
+              <ul>
+                {hexbinSummary.phylumCounts.map(el => { return <li>{el.Phylum}: {el.Count}</li> })}
+              </ul>
+            </div>
+            <p>{hexbinSummary.speciesCount.rawCount} different scientific names</p>
+
+          </div>
+        : 'gathering summary information...'
+      }
       </div>
     )
   }

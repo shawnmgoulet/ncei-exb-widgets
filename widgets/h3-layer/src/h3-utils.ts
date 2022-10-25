@@ -113,7 +113,6 @@ function toggleOutlineColor (graphic: Graphic) {
 }
 
 async function getH3Counts (whereClause: string) {
-  // return cached results
   if ((whereClause === '1=1' || !whereClause) && noFiltersH3Counts) {
     console.log('returning results from cache...')
     return noFiltersH3Counts
@@ -184,6 +183,35 @@ async function getDepthRange (h3, whereClause = '1=1') {
   const endTime = new Date()
   console.debug(`retrieved depthRange for h3 ${h3} in ${(endTime.getTime() - startTime.getTime()) / 1000} seconds`)
   return data.features[0].attributes
+}
+
+async function getSpeciesCount (h3, whereClause = '1=1') {
+  const startTime = new Date()
+  const searchParams = new URLSearchParams()
+  searchParams.set('where', `${whereClause} and h3_2='${h3}'`)
+  searchParams.set('outFields', 'ScientificName')
+  searchParams.set('returnCountOnly', 'true')
+  searchParams.set('returnDistinctValues', 'true')
+  searchParams.set('returnGeometry', 'false')
+  searchParams.set('f', 'json')
+
+  const response = await fetch(featureServiceUrl, {
+    method: 'POST',
+    body: searchParams
+  })
+  if (!response.ok) {
+    console.warn('Error fetching data from: ' + featureServiceUrl)
+    return
+  }
+  const data = await response.json()
+
+  const endTime = new Date()
+  console.debug(`retrieved species count for h3 ${h3} in ${(endTime.getTime() - startTime.getTime()) / 1000} seconds`)
+  // calculate normalized value (0-100). counts range from 1 to 279 (w/o criteria applied)
+  const min = 1
+  const max = 279
+  const normalizedValue = Math.round((data.count - min) / (max - min) * 100)
+  return { rawCount: data.count, normalizedCount: normalizedValue }
 }
 
 async function getPhylumCounts (h3, whereClause = '1=1') {
@@ -282,5 +310,6 @@ export {
   toggleOutlineColor,
   stdColor,
   highlightColor,
-  getHighlightedGraphic
+  getHighlightedGraphic,
+  getSpeciesCount
 }
