@@ -1,0 +1,34 @@
+{
+  "name": "filtered-record-count",
+  "label": "Filtered Record Count",
+  "dependency": "jimu-arcgis",
+  "type": "widget",
+  "version": "1.0.0",
+  "exbVersion": "1.9.0",
+  "author": "John Cartwright",
+  "description": "display the total and filtered record counts",
+  "copyright": "",
+  "license": "http://www.apache.org/licenses/LICENSE-2.0",
+  "messageActions": [
+    {
+      "name": "filter-change",
+      "label": "Filter Change",
+      "uri": "actions/filter-change-action",
+      "settingUri": "actions/filter-change-action-setting"
+    },
+    {
+      "name": "extent-change",
+      "label": "Extent Change Handler",
+      "uri": "actions/extent-change-action",
+      "settingUri": "actions/extent-change-action-setting"
+    }
+  ],
+  "properties": {},
+  "translatedLocales": [
+    "en"
+  ],
+  "defaultSize": {
+    "width": 200,
+    "height": 100
+  }
+}
