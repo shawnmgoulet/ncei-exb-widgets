@@ -32,16 +32,17 @@ export default class ExtentChangeAction extends AbstractMessageAction {
         const extentChangeMessage = message as ExtentChangeMessage
         // trigger an update for the widget when Extent is different from previous. Must be a plain JavaScript Object (see https://developers.arcgis.com/experience-builder/guide/widget-communication/)
         // getAppStore().dispatch(appActions.widgetStatePropChange(this.widgetId, 'extent', this.formatExtent(extentChangeMessage.extent)))
-        getAppStore().dispatch(appActions.widgetStatePropChange(
-          this.widgetId,
-          'extent',
-          {
-            xmin: extentChangeMessage.extent.xmin,
-            ymin: extentChangeMessage.extent.ymin,
-            xmax: extentChangeMessage.extent.xmax,
-            ymax: extentChangeMessage.extent.ymax
-          })
-        )
+
+        // getAppStore().dispatch(appActions.widgetStatePropChange(
+        //   this.widgetId,
+        //   'extent',
+        //   {
+        //     xmin: extentChangeMessage.extent.xmin,
+        //     ymin: extentChangeMessage.extent.ymin,
+        //     xmax: extentChangeMessage.extent.xmax,
+        //     ymax: extentChangeMessage.extent.ymax
+        //   })
+        // )
         break
     }
 

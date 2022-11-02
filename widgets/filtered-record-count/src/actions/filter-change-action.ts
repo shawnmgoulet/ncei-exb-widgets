@@ -31,7 +31,7 @@ export default class FilterChangeAction extends AbstractMessageAction {
     switch (message.type) {
       case MessageType.DataSourceFilterChange:
         const dsFilterChangeMessage = message as DataSourceFilterChangeMessage
-        console.log('FilterChangeAction: got DataSourceFilterChangeMessage', message, actionConfig)
+        // console.log('FilterChangeAction: got DataSourceFilterChangeMessage', message, actionConfig)
         const dataSource = DataSourceManager.getInstance().getDataSource(dsFilterChangeMessage.dataSourceId) as QueriableDataSource
         const queryParams: SqlQueryParams = dataSource.getCurrentQueryParams()
         getAppStore().dispatch(appActions.widgetStatePropChange(this.widgetId, 'queryParams', queryParams.where))
