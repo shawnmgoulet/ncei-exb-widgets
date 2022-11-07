@@ -1,62 +1,26 @@
 /** @jsx jsx */
 import { AllWidgetProps, jsx, IMState } from 'jimu-core'
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect} from 'react'
 import { JimuMapView, JimuMapViewComponent } from 'jimu-arcgis'
-import reactiveUtils from 'esri/core/reactiveUtils'
 import { defaultMessages as jimuUIMessages } from 'jimu-ui'
 import { IMConfig } from '../config'
 
-interface ExtraProps {
-  sqlString: any
-}
-
-// taken from Josh Comeau (https://www.joshwcomeau.com/snippets/javascript/debounce/)
-const debounce = (callback, wait: number) => {
-  let timeoutId = null
-  return (...args) => {
-    window.clearTimeout(timeoutId)
-    timeoutId = window.setTimeout(() => {
-      callback.apply(null, args)
-    }, wait)
-  }
-}
-
-export default function Widget (props: AllWidgetProps<IMConfig> & ExtraProps) {
+export default function Widget (props: AllWidgetProps<IMConfig>) {
   const [view, setView] = useState<JimuMapView>(null)
   const [isUpdating, setIsUpdating] = useState(false)
-
-  // TODO debounce not working because need to ensure a "false" value always applied at the end
-  // of an update cycle
-  const handleMapUpdating = useMemo(
-    () => debounce((val) => {
-      setIsUpdating(val)
-    }, 1000),
-    []
-  )
 
   useEffect(() => {
     if (!view) { return }
     const mapView = view.view
 
-    const extentWatchHandle = reactiveUtils.watch(
-      () => mapView.stationary,
-      (value) => {
-        console.log(`MapView is stationary: ${value}`)
-        // setIsUpdating(!value)
-      })
-
     const updatingWatchHandle = mapView.watch(
       'updating',
       (newStatus) => {
-        // handleMapUpdating(newStatus)
         setIsUpdating(newStatus)
       })
 
-    return function cleanup () {
+    return () => {
       // remove at time componment is destroyed
-      if (extentWatchHandle) {
-        extentWatchHandle.remove()
-      }
       if (updatingWatchHandle) {
         updatingWatchHandle.remove()
       }
