@@ -20,8 +20,9 @@ import FeatureLayerView from 'esri/views/layers/FeatureLayerView'
 import FeatureLayer from 'esri/layers/FeatureLayer'
 import reactiveUtils from 'esri/core/reactiveUtils'
 import MapView from 'esri/views/MapView'
+// import LayerView from 'esri/views/layers/LayerView'
 
-const { useSelector } = ReactRedux
+// const { useSelector } = ReactRedux
 
 // since we cannot pass Extent object from MessageAction and cannot convert to
 // geographic in MessageAction due to load error using webMercatorUtils
@@ -37,6 +38,7 @@ async function countAllSamples (dataSource: QueriableDataSource) {
   if (!dataSource) {
     throw new Error('DataSource cannot be null')
   }
+  const startTime = new Date()
   const searchParams = new URLSearchParams([
     ['where', '1=1'],
     ['returnCountOnly', 'true'],
@@ -51,6 +53,11 @@ async function countAllSamples (dataSource: QueriableDataSource) {
     console.log('failed to count total records from ' + dataSource.url)
     return
   }
+  // TODO replace with FeatureDataSource#queryCount?
+  // dataSource.queryCount({}).then(result => {
+  //   return result.count
+  // })
+  console.log(`Total record count complete in ${(new Date().getTime() - startTime.getTime()) / 1000} seconds`)
   return response.json()
 }
 
@@ -68,11 +75,6 @@ export default function Widget (props: AllWidgetProps<IMConfig>) {
   // })
   // console.log(`rendering filtered-record-count. extent: ${convertAndFormatCoordinates(widgetState?.extent)}, queryParams: ${widgetState?.queryParams}`)
 
-  // for debugging only
-  useEffect(() => {
-    console.log('inside useEffect. setting up subscriptions...')
-  }, [view, dataSource])
-
   useEffect(() => {
     if (!view) { return }
 
@@ -81,6 +83,12 @@ export default function Widget (props: AllWidgetProps<IMConfig>) {
     // const featureLayer = dataSource.layer
 
     const layer = mapView.map.layers.find(lyr => lyr.title === dataSource.layer.title) as FeatureLayer
+    const jimuLayerView = Object.values(view.jimuLayerViews).find(view => view.layerDataSourceId === dataSource.id)
+    // TODO type problem - why does typing this as FeatureLayerView cause visibleAtCurrentScale property to be invalid?
+    let layerView: FeatureLayerView
+    if (jimuLayerView.view.layer.type === 'feature') {
+      layerView = jimuLayerView.view as FeatureLayerView
+    }
 
     function mapLayerFeatureCount () {
       const startTime = new Date()
@@ -97,9 +105,24 @@ export default function Widget (props: AllWidgetProps<IMConfig>) {
     }
 
     function dataSourceFeatureCount () {
+      // TODO switch between server-side and client-side queries based on layerView.visibleAtCurrentScale
+      // console.log(layerView.visibleAtCurrentScale)
+
+      // async request timeout idea taken from  Faraz K. Kelhini, "Modern Asynchronous JavaScript"
+      const timeOut = 20000
+      const failure = new Promise((resolve, reject) => {
+        setTimeout(() => {
+          reject(new Error(`server failed to response in ${timeOut} milliseconds`))
+        }, timeOut)
+      })
+
       const startTime = new Date()
       const queryParams = dataSource?.getCurrentQueryParams()
-      dataSource.loadCount(queryParams, { widgetId: props.id }).then((count) => {
+      // TODO way to cancel any pending request? or is it necessary?
+      Promise.race([
+        dataSource.loadCount(queryParams, { widgetId: props.id }),
+        failure
+      ]).then((count) => {
         console.log(`dataSourceFeatureCount complete in ${(new Date().getTime() - startTime.getTime()) / 1000} seconds`)
         setFilteredRecordCount(count)
       }).catch((reason) => {
@@ -114,8 +137,11 @@ export default function Widget (props: AllWidgetProps<IMConfig>) {
         console.log('filtered-record-count: extent changed, updating filteredRecordCount...')
         setFilteredRecordCount(null)
         setServerError(false)
+        // maplayerFeature count is usually a little slower
         // mapLayerFeatureCount()
         dataSourceFeatureCount()
+        // clientSideFeatureCount only produces results when scale threshold has been crosed and points display
+        clientSideFeatureCount()
       })
 
     const layerDefinitionWatchHandle = reactiveUtils.watch(
@@ -127,7 +153,6 @@ export default function Widget (props: AllWidgetProps<IMConfig>) {
       })
 
     return () => {
-      // console.log('removing watch handles...')
       extentWatchHandle.remove()
       layerDefinitionWatchHandle.remove()
     }
@@ -161,11 +186,15 @@ export default function Widget (props: AllWidgetProps<IMConfig>) {
       console.warn('DataSource and/or MapView not yet available - cannot get record count')
       return
     }
+    const startTime = new Date()
+
     // get the JimuLayerView corresponding to the configured DataSource
     const jimuLayerView = Object.values(view.jimuLayerViews).find(view => view.layerDataSourceId === dataSource.id)
     const layerView = jimuLayerView.view as FeatureLayerView
     layerView.queryFeatureCount().then(count => {
-      return count
+      console.log(`clientSideFeatureCount complete in ${(new Date().getTime() - startTime.getTime()) / 1000} seconds`)
+      console.log('clientSideFeatureCount: ', count)
+      // setFilteredRecordCount(count)
     })
   }
 
@@ -186,6 +215,16 @@ export default function Widget (props: AllWidgetProps<IMConfig>) {
     setView(jmv)
   }
 
+  function formatCounts() {
+    if (totalRecordCount !== null && filteredRecordCount !== null) {
+      return <span>{filteredRecordCount.toLocaleString('en-US')} out of {totalRecordCount.toLocaleString('en-US')} records</span>
+    } else if (serverError) {
+      return <span>Server Error - please try again</span>
+    } else {
+      return <span>updating...</span>
+    }
+  }
+
   return (
     <div>
       <DataSourceComponent
@@ -198,11 +237,7 @@ export default function Widget (props: AllWidgetProps<IMConfig>) {
         onActiveViewChange={activeViewChangeHandler}
       />
 
-      {(totalRecordCount !== null && filteredRecordCount !== null)
-        ? <span>{filteredRecordCount.toLocaleString('en-US')} out of {totalRecordCount.toLocaleString('en-US')} records</span>
-        : 'updating...'
-      }
-      {serverError ? <span>Server Error</span> : ''}
+      {formatCounts()}
       {/* <p>Extent: {widgetState?.extent ? convertAndFormatCoordinates(widgetState.extent, 3) : ''}</p>
       <p>Filter: {widgetState?.queryParams ? widgetState.queryParams : 'none'}</p> */}
     </div>
