@@ -11,7 +11,7 @@ import {
   SqlQueryParams
 } from 'jimu-core'
 import { JimuMapView, JimuMapViewComponent, FeatureLayerDataSource } from 'jimu-arcgis'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import webMercatorUtils from 'esri/geometry/support/webMercatorUtils'
 import Extent from 'esri/geometry/Extent'
 import { IMConfig } from '../config'
@@ -67,6 +67,8 @@ export default function Widget (props: AllWidgetProps<IMConfig>) {
   const [dataSource, setDataSource] = useState<FeatureLayerDataSource>()
   const [view, setView] = useState<JimuMapView>(null)
   const [serverError, setServerError] = useState(false)
+  const abortControllerRef = useRef<AbortController>()
+  const promisePendingRef = useRef(false)
 
   // get state for this widget. Any change in widgetState, e.g. change of map extent
   // or datasource filter, causes widget to re-render
@@ -105,7 +107,18 @@ export default function Widget (props: AllWidgetProps<IMConfig>) {
     }
 
     function dataSourceFeatureCount () {
-      // TODO switch between server-side and client-side queries based on layerView.visibleAtCurrentScale
+      if (promisePendingRef.current) {
+        console.warn('count already in progress...')
+        // TODO cancel running request?
+        // if (abortControllerRef.current) {
+        //   abortControllerRef.current.abort()
+        //   console.log('cancelled running request')
+        //   abortControllerRef.current = null
+        // }
+      } else {
+        console.log('ready to count...')
+      }
+      // TODO toggle between server-side and client-side queries based on layerView.visibleAtCurrentScale
       // console.log(layerView.visibleAtCurrentScale)
 
       // async request timeout idea taken from  Faraz K. Kelhini, "Modern Asynchronous JavaScript"
@@ -118,7 +131,9 @@ export default function Widget (props: AllWidgetProps<IMConfig>) {
 
       const startTime = new Date()
       const queryParams = dataSource?.getCurrentQueryParams()
-      // TODO way to cancel any pending request? or is it necessary?
+      promisePendingRef.current = true
+      abortControllerRef.current = new AbortController()
+      // TODO any way to pass AbortController.signal or should move to FeatureLayer#queryFeatureCount?
       Promise.race([
         dataSource.loadCount(queryParams, { widgetId: props.id }),
         failure
@@ -128,7 +143,7 @@ export default function Widget (props: AllWidgetProps<IMConfig>) {
       }).catch((reason) => {
         console.error('datasourceFeatureCount failed: ', reason)
         setServerError(true)
-      })
+      }).finally(() => { promisePendingRef.current = false })
     }
 
     const extentWatchHandle = reactiveUtils.when(
