@@ -20,7 +20,7 @@ import FeatureLayerView from 'esri/views/layers/FeatureLayerView'
 import FeatureLayer from 'esri/layers/FeatureLayer'
 import reactiveUtils from 'esri/core/reactiveUtils'
 import MapView from 'esri/views/MapView'
-// import LayerView from 'esri/views/layers/LayerView'
+import LayerView from 'esri/views/layers/LayerView'
 
 // const { useSelector } = ReactRedux
 
@@ -68,7 +68,6 @@ export default function Widget (props: AllWidgetProps<IMConfig>) {
   const [view, setView] = useState<JimuMapView>(null)
   const [serverError, setServerError] = useState(false)
   const abortControllerRef = useRef<AbortController>()
-  const promisePendingRef = useRef(false)
 
   // get state for this widget. Any change in widgetState, e.g. change of map extent
   // or datasource filter, causes widget to re-render
@@ -81,46 +80,47 @@ export default function Widget (props: AllWidgetProps<IMConfig>) {
     if (!view) { return }
 
     const mapView = view.view
-    // layerDefinition on DataSource layer (FeatureLayer) is always null
-    // const featureLayer = dataSource.layer
+    // dataSource.getCurrentQueryParams().where and mapview layer.definitionExpression should be equal
 
+    // const featureLayer = dataSource.layer
     const layer = mapView.map.layers.find(lyr => lyr.title === dataSource.layer.title) as FeatureLayer
     const jimuLayerView = Object.values(view.jimuLayerViews).find(view => view.layerDataSourceId === dataSource.id)
-    // TODO type problem - why does typing this as FeatureLayerView cause visibleAtCurrentScale property to be invalid?
-    let layerView: FeatureLayerView
+    let layerView: LayerView
+    // __esri.LayerView == esri/views/layers/LayerView?
     if (jimuLayerView.view.layer.type === 'feature') {
       layerView = jimuLayerView.view as FeatureLayerView
     }
 
-    function mapLayerFeatureCount () {
+    // use FeatureLayer#queryFeatureCount
+    function featureLayerFeatureCount () {
+      // cancel any running request
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort()
+      }
+
+      abortControllerRef.current = new AbortController()
       const startTime = new Date()
       layer.queryFeatureCount({
         geometry: mapView.extent,
         where: layer.definitionExpression
-      }).then(result => {
-        console.log(`mapLayerFeatureCount complete in ${(new Date().getTime() - startTime.getTime()) / 1000} seconds`)
+      },
+      { signal: abortControllerRef.current.signal }).then(result => {
+        console.log(`featureLayerFeatureCount complete in ${(new Date().getTime() - startTime.getTime()) / 1000} seconds`)
         setFilteredRecordCount(result)
       }).catch((reason) => {
-        console.error('mapLayerFeatureCount failed: ', reason)
-        setServerError(true)
+        if (reason.name === 'AbortError') {
+          console.log('cancelled running request')
+        } else {
+          console.error('featureLayerFeatureCount failed: ', reason)
+          setServerError(true)
+        }
+      }).finally(() => {
+        abortControllerRef.current = null
       })
     }
 
+    // use FeatureLayerDataSource#loadCount
     function dataSourceFeatureCount () {
-      if (promisePendingRef.current) {
-        console.warn('count already in progress...')
-        // TODO cancel running request?
-        // if (abortControllerRef.current) {
-        //   abortControllerRef.current.abort()
-        //   console.log('cancelled running request')
-        //   abortControllerRef.current = null
-        // }
-      } else {
-        console.log('ready to count...')
-      }
-      // TODO toggle between server-side and client-side queries based on layerView.visibleAtCurrentScale
-      // console.log(layerView.visibleAtCurrentScale)
-
       // async request timeout idea taken from  Faraz K. Kelhini, "Modern Asynchronous JavaScript"
       const timeOut = 20000
       const failure = new Promise((resolve, reject) => {
@@ -131,8 +131,6 @@ export default function Widget (props: AllWidgetProps<IMConfig>) {
 
       const startTime = new Date()
       const queryParams = dataSource?.getCurrentQueryParams()
-      promisePendingRef.current = true
-      abortControllerRef.current = new AbortController()
       // TODO any way to pass AbortController.signal or should move to FeatureLayer#queryFeatureCount?
       Promise.race([
         dataSource.loadCount(queryParams, { widgetId: props.id }),
@@ -143,28 +141,35 @@ export default function Widget (props: AllWidgetProps<IMConfig>) {
       }).catch((reason) => {
         console.error('datasourceFeatureCount failed: ', reason)
         setServerError(true)
-      }).finally(() => { promisePendingRef.current = false })
+      })
+    }
+
+    function countFilteredFeatures () {
+      setFilteredRecordCount(null)
+      setServerError(false)
+
+      if (layerView.visibleAtCurrentScale) {
+        // clientSideFeatureCount only produces results when scale threshold has been crosed and points display
+        clientSideFeatureCount()
+      } else {
+        // featurelayerFeature count is usually a little slower
+        featureLayerFeatureCount()
+        // dataSourceFeatureCount()
+      }
     }
 
     const extentWatchHandle = reactiveUtils.when(
       () => mapView.stationary,
       () => {
         console.log('filtered-record-count: extent changed, updating filteredRecordCount...')
-        setFilteredRecordCount(null)
-        setServerError(false)
-        // maplayerFeature count is usually a little slower
-        // mapLayerFeatureCount()
-        dataSourceFeatureCount()
-        // clientSideFeatureCount only produces results when scale threshold has been crosed and points display
-        clientSideFeatureCount()
+        countFilteredFeatures()
       })
 
     const layerDefinitionWatchHandle = reactiveUtils.watch(
       () => layer.definitionExpression,
       () => {
         console.log(`filtered-record-count: layer definitionExpression changed to ${layer.definitionExpression}, updating filteredRecordCount...`)
-        setFilteredRecordCount(null)
-        mapLayerFeatureCount()
+        countFilteredFeatures()
       })
 
     return () => {
@@ -209,7 +214,7 @@ export default function Widget (props: AllWidgetProps<IMConfig>) {
     layerView.queryFeatureCount().then(count => {
       console.log(`clientSideFeatureCount complete in ${(new Date().getTime() - startTime.getTime()) / 1000} seconds`)
       console.log('clientSideFeatureCount: ', count)
-      // setFilteredRecordCount(count)
+      setFilteredRecordCount(count)
     })
   }
 
