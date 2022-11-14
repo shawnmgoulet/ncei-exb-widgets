@@ -148,13 +148,13 @@ export default function Widget (props: AllWidgetProps<IMConfig>) {
       setFilteredRecordCount(null)
       setServerError(false)
 
-      if (layerView.visibleAtCurrentScale) {
-        // clientSideFeatureCount only produces results when scale threshold has been crosed and points display
-        clientSideFeatureCount()
-      } else {
+      if (layerView.suspended) {
         // featurelayerFeature count is usually a little slower
         featureLayerFeatureCount()
         // dataSourceFeatureCount()
+      } else {
+        // clientSideFeatureCount only produces results when scale threshold has been crosed and points display
+        clientSideFeatureCount()
       }
     }
 
