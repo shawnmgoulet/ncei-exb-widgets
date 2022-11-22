@@ -12,7 +12,7 @@ import Color from 'esri/Color'
 
 // TODO derive from settings.tsx
 const featureServiceUrl = 'https://services2.arcgis.com/C8EMgrsFcRFL6LrL/ArcGIS/rest/services/DSCRTP_NatDB_FeatureLayer/FeatureServer/0/query'
-const stdColor = new Color('white')
+const stdColor = new Color('whitesmoke')
 const highlightColor = new Color('yellow')
 
 // cache the h3 counts when there are no filters applied
@@ -204,6 +204,7 @@ async function getSpeciesCount (h3, whereClause = '1=1') {
     return
   }
   const data = await response.json()
+  if (!data?.count) { throw new Error('species count payload incorrect') }
 
   const endTime = new Date()
   console.debug(`retrieved species count for h3 ${h3} in ${(endTime.getTime() - startTime.getTime()) / 1000} seconds`)
@@ -229,13 +230,13 @@ async function getPhylumCounts (h3, whereClause = '1=1') {
     body: searchParams
   })
   if (!response.ok) {
-    console.warn('Error fetching data from: ' + featureServiceUrl)
-    return
+    throw new Error('Error fetching data from: ' + featureServiceUrl)
   }
   const data = await response.json()
 
   const endTime = new Date()
   console.debug(`retrieved Phylum counts for h3 ${h3} in ${(endTime.getTime() - startTime.getTime()) / 1000} seconds`)
+  if (!data?.features) { throw new Error('phylum counts payload incorrect') }
   return data.features.map(it => it.attributes)
 }
 
@@ -246,7 +247,7 @@ function getSimpleFillSymbol (fillColor = [227, 139, 79, 0.8]) {
     type: 'simple-fill',
     color: fillColor,
     outline: {
-      color: [255, 255, 255],
+      color: stdColor,
       width: 1
     }
   }

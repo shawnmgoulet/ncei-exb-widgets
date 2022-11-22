@@ -28,6 +28,7 @@ import GraphicsLayer from 'esri/layers/GraphicsLayer'
 import Graphic from 'esri/Graphic'
 import TileLayer from 'esri/layers/TileLayer'
 import { useState, useEffect, useRef } from 'react'
+import PhylumChart from './PhylumChart'
 import { IMConfig } from '../config'
 // import defaultMessages from './translations/default'
 import {
@@ -62,6 +63,7 @@ export default function H3Layer (props: AllWidgetProps<IMConfig>) {
   const graphicsLayerRef = useRef<GraphicsLayer>()
   const [selectedGraphic, setSelectedGraphic] = useState<Graphic|null>(null)
   const [hexbinSummary, setHexbinSummary] = useState<HexbinSummary>()
+  const [serverError, setServerError] = useState(false)
   const queryParamsRef = useRef(null)
   const tileLayer = new TileLayer({
     url: 'https://tiles.arcgis.com/tiles/C8EMgrsFcRFL6LrL/arcgis/rest/services/multibeam_mosaic_hillshade/MapServer'
@@ -102,6 +104,7 @@ export default function H3Layer (props: AllWidgetProps<IMConfig>) {
 
       // reset hexbin summary
       setHexbinSummary(null)
+      setServerError(null)
 
       // use queryParamsRef to avoid having to add widgetState.queryParams to dependency array
       const whereClause = queryParamsRef.current || '1=1'
@@ -119,6 +122,8 @@ export default function H3Layer (props: AllWidgetProps<IMConfig>) {
           speciesCount
         })
         console.log('promises completed: ', depthRange, phylumCounts, speciesCount)
+      }).catch((reason) => {
+        setServerError(reason)
       })
     } else {
       console.log('no selected hexbin...')
@@ -185,28 +190,38 @@ export default function H3Layer (props: AllWidgetProps<IMConfig>) {
   }
 
   function formatHexbinSummary () {
-    return (
+    if (serverError) {
+      return (
+        <div>
+          <p>Hexbin {h3} has {pointCount.toLocaleString()} sample(s)</p>
+          <span>Server Error - currently unable to collect statistics, please try again</span>
+        </div>
+      )
+    } else {
+      return (
       <div>
-      {/* <p>Extent: {widgetState?.extent ? convertAndFormatCoordinates(widgetState.extent, 3) : ''}</p> */}
-      {/* <p>Filter: {widgetState?.queryParams ? widgetState.queryParams : 'none'}</p> */}
-      <p>Hexbin {h3} has {pointCount.toLocaleString()} sample(s)</p>
+        {/* <p>Extent: {widgetState?.extent ? convertAndFormatCoordinates(widgetState.extent, 3) : ''}</p> */}
+        {/* <p>Filter: {widgetState?.queryParams ? widgetState.queryParams : 'none'}</p> */}
+        <p style={{ fontSize: 'medium' }}> Hexbin {h3} has <span style={{ fontSize: 'large', fontWeight: 'bold' }}>{pointCount.toLocaleString()}</span> sample(s)</p>
 
-      {hexbinSummary
-        ? <div>
-            <p>depths range from {hexbinSummary.minDepth} to {hexbinSummary.maxDepth}</p>
-            <div>
-              <p>Phylum Counts:</p>
-              <ul>
-                {hexbinSummary.phylumCounts.map(el => { return <li>{el.Phylum}: {el.Count}</li> })}
-              </ul>
+        {hexbinSummary
+          ? <div>
+              <p style={{ fontSize: 'medium' }}>depths range from <span style={{ fontSize: 'large', fontWeight: 'bold' }}>{hexbinSummary.minDepth}</span> to <span style={{ fontSize: 'large', fontWeight: 'bold' }}>{hexbinSummary.maxDepth}</span></p>
+              <div>
+                <p style={{ fontSize: 'medium' }}>Phylum Counts:</p>
+                {/* <ul>
+                  {hexbinSummary.phylumCounts.map(el => { return <li>{el.Phylum}: {el.Count}</li> })}
+                </ul> */}
+                <PhylumChart data={hexbinSummary.phylumCounts}/>
+              </div>
+              <p style={{ fontSize: 'medium' }}><span style={{ fontSize: 'large', fontWeight: 'bold' }}>{hexbinSummary.speciesCount.rawCount}</span> different scientific names</p>
+
             </div>
-            <p>{hexbinSummary.speciesCount.rawCount} different scientific names</p>
-
-          </div>
-        : 'gathering summary information...'
-      }
+          : 'gathering summary information...'
+        }
       </div>
-    )
+      )
+    }
   }
 
   return (

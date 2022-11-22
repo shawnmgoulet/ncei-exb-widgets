@@ -49,7 +49,7 @@ export class Classification {
   async load () {
     if (this.numClasses < this.data.length) {
       const breakpoints = await generateBuckets(this.bucketType, this.data, this.numClasses)
-      this.breakpoints = breakpoints.map((it: number) => Math.round(it))        
+      this.breakpoints = breakpoints.map((it: number) => Math.round(it))
     }
     this.min = Math.min(...this.data)
     this.max = Math.max(...this.data)

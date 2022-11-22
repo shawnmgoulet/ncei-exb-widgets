@@ -9,6 +9,9 @@
   "keywords": [],
   "author": "John Cartwright",
   "dependencies": {
+    "@observablehq/plot": "^0.6.0",
+    "@types/d3": "^7.4.0",
+    "d3": "^7.6.1",
     "geobuckets": "^0.0.3",
     "h3-js": "^3.7.2"
   }
