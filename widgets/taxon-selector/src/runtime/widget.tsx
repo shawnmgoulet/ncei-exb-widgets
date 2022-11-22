@@ -24,10 +24,9 @@ export default function Widget (props: AllWidgetProps<IMConfig>) {
 
   // handle changes to taxon selections. update map and publish new values
   useEffect(() => {
-    console.log('inside useEffect watching selected taxon...')
-    console.log('phylum: ' + selectedPhylum + '; class: ' + selectedClass + '; order: ' + selectedOrder + '; genus: ' + selectedGenus)
+    // console.log('phylum: ' + selectedPhylum + '; class: ' + selectedClass + '; order: ' + selectedOrder + '; genus: ' + selectedGenus)
     if (!dataSource || !view) {
-      console.warn('DataSource and/or MapView not yet set. QueryParams cannot updated')
+      console.warn('taxon-selector: DataSource and/or MapView not yet set. QueryParams cannot updated')
       return
     }
 
