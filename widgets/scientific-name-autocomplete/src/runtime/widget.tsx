@@ -29,7 +29,6 @@ function getQuery (selectedName): SqlQueryParams {
 }
 
 export default function (props: AllWidgetProps<IMConfig>) {
-  console.log('inside scientific_names_autocomplete with ', props)
   const [names, setNames] = useState(SCIENTIFIC_NAMES)
   const [selectedName, setSelectedName] = useState<string|null>(null)
   const [dataSource, setDataSource] = useState<QueriableDataSource|null>(null)
@@ -48,17 +47,15 @@ export default function (props: AllWidgetProps<IMConfig>) {
   useEffect(() => {
     if (!dataSource) {
       // cannot update queryParams w/o DataSource
-      console.log('no DataSource - unable to update')
+      console.warn('scientific-name-autocomplete: no DataSource - cannot update queryParams')
       return
     }
-    console.log(`scientific name set to ${selectedName}`)
     const q = getQuery(selectedName)
     dataSource?.updateQueryParams(q, props.id)
     MessageManager.getInstance().publishMessage(new DataSourceFilterChangeMessage(props.id, dataSource.id))
   }, [selectedName, dataSource, props.id])
 
   function nameChangeHandler (evt: React.MouseEvent<HTMLButtonElement>, value: string) {
-    console.log('setting name to ', value)
     setSelectedName(value)
   }
 
