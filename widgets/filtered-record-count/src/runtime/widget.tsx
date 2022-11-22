@@ -21,6 +21,7 @@ import FeatureLayer from 'esri/layers/FeatureLayer'
 import reactiveUtils from 'esri/core/reactiveUtils'
 import MapView from 'esri/views/MapView'
 import LayerView from 'esri/views/layers/LayerView'
+import './widget.css'
 
 // const { useSelector } = ReactRedux
 
@@ -246,7 +247,7 @@ export default function Widget (props: AllWidgetProps<IMConfig>) {
   }
 
   return (
-    <div>
+    <div style={{ paddingLeft: '10px' }}>
       <DataSourceComponent
         useDataSource={props.useDataSources?.[0]}
         widgetId={props.id}
