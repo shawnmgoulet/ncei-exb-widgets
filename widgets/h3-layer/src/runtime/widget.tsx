@@ -141,7 +141,10 @@ export default function H3Layer (props: AllWidgetProps<IMConfig>) {
       // console.log('outside hexbin')
       setSelectedGraphic(null)
     } else {
-      console.error('there should only be 0 or 1 graphics detected')
+      // console.error('there should only be 0 or 1 graphics detected')
+      // when click lands on hexbin boundary, arbitrarily use the first element in array
+      console.log('click landed on hexbin boundary...')
+      setSelectedGraphic(graphicHits[0].graphic)
     }
   }
 
@@ -214,7 +217,7 @@ export default function H3Layer (props: AllWidgetProps<IMConfig>) {
                 </ul> */}
                 <PhylumChart data={hexbinSummary.phylumCounts}/>
               </div>
-              <p style={{ fontSize: 'medium' }}><span style={{ fontSize: 'large', fontWeight: 'bold' }}>{hexbinSummary.speciesCount.rawCount}</span> different scientific names</p>
+              <p style={{ fontSize: 'medium' }}><span style={{ fontSize: 'large', fontWeight: 'bold' }}>{hexbinSummary.speciesCount.rawCount}</span> unique scientific name(s)</p>
 
             </div>
           : 'gathering summary information...'

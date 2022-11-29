@@ -14,6 +14,7 @@ import Color from 'esri/Color'
 const featureServiceUrl = 'https://services2.arcgis.com/C8EMgrsFcRFL6LrL/ArcGIS/rest/services/DSCRTP_NatDB_FeatureLayer/FeatureServer/0/query'
 const stdColor = new Color('whitesmoke')
 const highlightColor = new Color('yellow')
+const hexbinBoundaryWidth = 0
 
 // cache the h3 counts when there are no filters applied
 let noFiltersH3Counts = null
@@ -104,10 +105,10 @@ function toggleOutlineColor (graphic: Graphic) {
 
   if (stdColor.toHex() === graphic.symbol.outline.color.toHex()) {
     symbolCopy.outline.color = highlightColor
-    symbolCopy.outline.width = 2
+    symbolCopy.outline.width = 1.5
   } else {
     symbolCopy.outline.color = stdColor
-    symbolCopy.outline.width = 1
+    symbolCopy.outline.width = hexbinBoundaryWidth
   }
   graphic.symbol = symbolCopy
 }
@@ -248,7 +249,7 @@ function getSimpleFillSymbol (fillColor = [227, 139, 79, 0.8]) {
     color: fillColor,
     outline: {
       color: stdColor,
-      width: 1
+      width: hexbinBoundaryWidth
     }
   }
 }
