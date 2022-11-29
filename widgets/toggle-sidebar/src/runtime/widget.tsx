@@ -17,7 +17,17 @@
   A copy of the license is available in the repository's
   LICENSE file.
 */
-import { AllWidgetProps, React, IMState, ReactRedux, appActions, getAppStore, DataSourceManager, DataSourceComponent, browserHistory } from 'jimu-core'
+import {
+  AllWidgetProps,
+  React,
+  IMState,
+  ReactRedux,
+  appActions,
+  getAppStore,
+  DataSourceManager,
+  DataSourceComponent,
+  jimuHistory
+} from 'jimu-core'
 import { JimuMapView, JimuMapViewComponent } from 'jimu-arcgis'
 import { IMConfig } from '../config'
 import defaultMessages from './translations/default'
@@ -35,6 +45,7 @@ export default function Widget (props: AllWidgetProps<IMConfig>) {
   useEffect(() => {
     const widgets = getAppStore().getState().appConfig.widgets
     setAppWidgets(widgets)
+    // console.log('appConfig: ', getAppStore().getState().appConfig)
   }, [])
 
   // useEffect(() => {
@@ -92,7 +103,7 @@ export default function Widget (props: AllWidgetProps<IMConfig>) {
         const graphicHits = response.results?.filter(hitResult => hitResult.layer.type === 'graphics')
         if (coralHits.length || graphicHits.length) {
           handleExpandSidebar()
-          browserHistory.changeView('section_2', 'view_5')
+          jimuHistory.changeView('section_2', 'view_5')
         }
       })
     })
