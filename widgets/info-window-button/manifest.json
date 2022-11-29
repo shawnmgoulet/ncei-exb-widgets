@@ -1,0 +1,19 @@
+{
+  "name": "info-window-button",
+  "label": "Info Window Button",
+  "type": "widget",
+  "version": "1.0.0",
+  "exbVersion": "1.9.0",
+  "author": "John Cartwright",
+  "description": "Open the configured tooltip window",
+  "copyright": "",
+  "license": "http://www.apache.org/licenses/LICENSE-2.0",
+  "properties": {},
+  "translatedLocales": [
+    "en"
+  ],
+  "defaultSize": {
+    "width": 100,
+    "height": 30
+  }
+}
