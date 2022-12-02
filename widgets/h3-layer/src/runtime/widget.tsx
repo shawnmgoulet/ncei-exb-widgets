@@ -133,7 +133,10 @@ export default function H3Layer (props: AllWidgetProps<IMConfig>) {
   }, [selectedGraphic])
 
   function mapClickHandler (hitTestResult) {
+    console.log('inside mapClickHandler with : ', hitTestResult)
+    const featureHits = hitTestResult.results?.filter(hitResult => hitResult.layer.type === 'feature')
     const graphicHits = hitTestResult.results?.filter(hitResult => hitResult.layer.type === 'graphics')
+    console.log(`${featureHits?.length || 0} features; ${graphicHits?.length || 0} hexbins`)
     if (graphicHits?.length === 1) {
       // console.log('hexbin clicked: ', graphicHits[0].graphic.attributes.h3)
       setSelectedGraphic(graphicHits[0].graphic)
@@ -143,7 +146,7 @@ export default function H3Layer (props: AllWidgetProps<IMConfig>) {
     } else {
       // console.error('there should only be 0 or 1 graphics detected')
       // when click lands on hexbin boundary, arbitrarily use the first element in array
-      console.log('click landed on hexbin boundary...')
+      // console.log('click landed on hexbin boundary...')
       setSelectedGraphic(graphicHits[0].graphic)
     }
   }
@@ -187,7 +190,11 @@ export default function H3Layer (props: AllWidgetProps<IMConfig>) {
       })
 
       jmv.view.on('click', (evt) => {
-        jmv.view.hitTest(evt, opts).then(response => mapClickHandler(response))
+        console.log('mapclick detected...')
+        // TODO why is hitTest not always responding?
+        jmv.view.hitTest(evt)
+          .then(response => mapClickHandler(response))
+          .catch(e => console.error('Error in hitTest'))
       })
     })
   }
