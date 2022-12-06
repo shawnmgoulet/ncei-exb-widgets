@@ -5,6 +5,7 @@ import {
   getAppStore,
   appActions,
   DataSourceFilterChangeMessage,
+  ExtentChangeMessage,
   DataSourceManager,
   QueriableDataSource,
   SqlQueryParams,
@@ -13,8 +14,10 @@ import {
 
 export default class FilterAction extends AbstractMessageAction {
   filterMessageDescription (messageDescription: MessageDescription): boolean {
-    // console.log('inside filterMessageDescription: ', messageDescription)
-    return messageDescription.messageType === 'DATA_SOURCE_FILTER_CHANGE'
+    return (
+      messageDescription.messageType === 'DATA_SOURCE_FILTER_CHANGE' ||
+      messageDescription.messageType === 'EXTENT_CHANGE'
+    )
   }
 
   // replaced by filterMessageDescription in v1.9
@@ -23,7 +26,6 @@ export default class FilterAction extends AbstractMessageAction {
   // }
 
   filterMessage (message: Message): boolean {
-    // console.log('inside filterMessage: ', message)
     return true
   }
 
@@ -33,28 +35,34 @@ export default class FilterAction extends AbstractMessageAction {
   }
 
   onExecute (message: Message, actionConfig?: any): Promise<boolean> | boolean {
-    // let q = `${actionConfig.fieldName} = '${message}'`
-    let queryString = '1=1'
-    // TODO where is actionConfig set?
-    // console.log('actionConfig: ',actionConfig)
-
     switch (message.type) {
       case MessageType.DataSourceFilterChange:
-        // console.log('erddap-query: filter-change-action. got DataSourceFilterChangeMessage', message, actionConfig)
-        const ds: QueriableDataSource = DataSourceManager.getInstance().getDataSource((<DataSourceFilterChangeMessage>message).dataSourceId) as QueriableDataSource
+        const dsFilterChangeMessage = message as DataSourceFilterChangeMessage
+        // console.log('erddap-query: filter-change-action. got DataSourceFilterChangeMessage', dsFilterChangeMessage, actionConfig)
+        const ds = DataSourceManager.getInstance().getDataSource(dsFilterChangeMessage.dataSourceId) as QueriableDataSource
         const queryParams: SqlQueryParams = ds.getCurrentQueryParams()
-        const whereClause = queryParams.where
-        if (whereClause) {
-          // console.log('erddap-query: filter-change-action. where: ', queryParams.where)
-          queryString = queryParams.where
-        } else {
-          // console.log('erddap-query: filter-change-action. no where clause set')
-          queryString = '1=1'
-        }
+        getAppStore().dispatch(appActions.widgetStatePropChange(this.widgetId, 'queryString', queryParams.where))
+        break
+
+      case MessageType.ExtentChange:
+        // console.log('MessageHandlerAction: got ExtentChangeMessage', message, actionConfig)
+        const extentChangeMessage = message as ExtentChangeMessage
+        // trigger an update for the widget when Extent is different from previous.
+        // Must be a plain JavaScript Object (see https://developers.arcgis.com/experience-builder/guide/widget-communication/)
+        // console.log('inside actionHandler. spatialReference: ', extentChangeMessage.extent.spatialReference)
+        getAppStore().dispatch(appActions.widgetStatePropChange(
+          this.widgetId,
+          'extent',
+          {
+            xmin: extentChangeMessage.extent.xmin,
+            ymin: extentChangeMessage.extent.ymin,
+            xmax: extentChangeMessage.extent.xmax,
+            ymax: extentChangeMessage.extent.ymax
+          })
+        )
+        break
     }
 
-    //Save queryString to store
-    getAppStore().dispatch(appActions.widgetStatePropChange(this.widgetId, 'queryString', queryString));
     return true
   }
 }
