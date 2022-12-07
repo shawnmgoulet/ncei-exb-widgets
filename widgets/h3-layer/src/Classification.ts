@@ -74,7 +74,7 @@ export class Classification {
 
   printBinCounts () {
     if (!this.breakpoints) {
-      console.log(` ${this.data.length} is not enough data points to produce a classification.`)
+      // console.log(` ${this.data.length} is not enough data points to produce a classification.`)
       return
     }
     const counts = new Array(this.numClasses + 1).fill(0)

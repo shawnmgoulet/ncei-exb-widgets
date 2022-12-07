@@ -104,7 +104,7 @@ export default function H3Layer (props: AllWidgetProps<IMConfig>) {
   }
 
   useEffect(() => {
-    console.log('queryParams changed, updating graphics layer: ', widgetState?.queryParams)
+    // console.log('queryParams changed, updating graphics layer: ', widgetState?.queryParams)
     resetHexbinSummary()
     if (!graphicsLayerRef.current) {
       console.warn('GraphicsLayer not yet available')
@@ -120,7 +120,7 @@ export default function H3Layer (props: AllWidgetProps<IMConfig>) {
   useEffect(() => {
     if (selectedGraphic) {
       const h3 = selectedGraphic.attributes.h3
-      console.log('selected hexbin changed: ', h3)
+      // console.log('selected hexbin changed: ', h3)
       deselectPreviousHexbin()
       toggleOutlineColor(selectedGraphic)
 
@@ -143,12 +143,12 @@ export default function H3Layer (props: AllWidgetProps<IMConfig>) {
           phylumCounts,
           speciesCount
         })
-        console.log('promises completed: ', depthRange, phylumCounts, speciesCount)
+        // console.log('promises completed: ', depthRange, phylumCounts, speciesCount)
       }).catch((reason) => {
         setServerError(reason)
       })
     } else {
-      console.log('no selected hexbin...')
+      // console.log('no selected hexbin...')
       resetHexbinSummary()
       deselectPreviousHexbin()
     }

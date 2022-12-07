@@ -51,14 +51,14 @@ async function countAllSamples (dataSource: QueriableDataSource) {
     body: searchParams
   })
   if (!response.ok) {
-    console.log('failed to count total records from ' + dataSource.url)
+    console.error('failed to count total records from ' + dataSource.url)
     return
   }
   // TODO replace with FeatureDataSource#queryCount?
   // dataSource.queryCount({}).then(result => {
   //   return result.count
   // })
-  console.log(`Total record count complete in ${(new Date().getTime() - startTime.getTime()) / 1000} seconds`)
+  // console.log(`Total record count complete in ${(new Date().getTime() - startTime.getTime()) / 1000} seconds`)
   return response.json()
 }
 
@@ -106,11 +106,11 @@ export default function Widget (props: AllWidgetProps<IMConfig>) {
         where: layer.definitionExpression
       },
       { signal: abortControllerRef.current.signal }).then(result => {
-        console.log(`featureLayerFeatureCount complete in ${(new Date().getTime() - startTime.getTime()) / 1000} seconds`)
+        // console.log(`featureLayerFeatureCount complete in ${(new Date().getTime() - startTime.getTime()) / 1000} seconds`)
         setFilteredRecordCount(result)
       }).catch((reason) => {
         if (reason.name === 'AbortError') {
-          console.log('cancelled running request')
+          // console.log('cancelled running request')
         } else {
           console.error('featureLayerFeatureCount failed: ', reason)
           setServerError(true)
@@ -137,7 +137,7 @@ export default function Widget (props: AllWidgetProps<IMConfig>) {
         dataSource.loadCount(queryParams, { widgetId: props.id }),
         failure
       ]).then((count) => {
-        console.log(`dataSourceFeatureCount complete in ${(new Date().getTime() - startTime.getTime()) / 1000} seconds`)
+        // console.log(`dataSourceFeatureCount complete in ${(new Date().getTime() - startTime.getTime()) / 1000} seconds`)
         setFilteredRecordCount(count)
       }).catch((reason) => {
         console.error('datasourceFeatureCount failed: ', reason)
@@ -162,14 +162,14 @@ export default function Widget (props: AllWidgetProps<IMConfig>) {
     const extentWatchHandle = reactiveUtils.when(
       () => mapView.stationary,
       () => {
-        console.log('filtered-record-count: extent changed, updating filteredRecordCount...')
+        // console.log('filtered-record-count: extent changed, updating filteredRecordCount...')
         countFilteredFeatures()
       })
 
     const layerDefinitionWatchHandle = reactiveUtils.watch(
       () => layer.definitionExpression,
       () => {
-        console.log(`filtered-record-count: layer definitionExpression changed to ${layer.definitionExpression}, updating filteredRecordCount...`)
+        // console.log(`filtered-record-count: layer definitionExpression changed to ${layer.definitionExpression}, updating filteredRecordCount...`)
         countFilteredFeatures()
       })
 
@@ -213,8 +213,8 @@ export default function Widget (props: AllWidgetProps<IMConfig>) {
     const jimuLayerView = Object.values(view.jimuLayerViews).find(view => view.layerDataSourceId === dataSource.id)
     const layerView = jimuLayerView.view as FeatureLayerView
     layerView.queryFeatureCount().then(count => {
-      console.log(`clientSideFeatureCount complete in ${(new Date().getTime() - startTime.getTime()) / 1000} seconds`)
-      console.log('clientSideFeatureCount: ', count)
+      // console.log(`clientSideFeatureCount complete in ${(new Date().getTime() - startTime.getTime()) / 1000} seconds`)
+      // console.log('clientSideFeatureCount: ', count)
       setFilteredRecordCount(count)
     })
   }
