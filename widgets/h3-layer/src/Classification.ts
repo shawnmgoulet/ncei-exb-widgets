@@ -61,8 +61,8 @@ export class Classification {
   getColor (value: number) {
     if (!this.ready) { throw new Error('not yet initialized') }
     if (!this.breakpoints) {
-      // when there is not enough data points to create classification, return minimum color (bucket) as default
-      return this.colors[0]
+      // when there is not enough data points to create classification, return maximum color (bucket) as default
+      return this.colors[this.colors.length - 1]
     }
     for (const [idx, breakpoint] of this.breakpoints.entries()) {
       if (value <= breakpoint) {

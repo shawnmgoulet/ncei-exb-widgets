@@ -21,16 +21,19 @@ import {
   AllWidgetProps,
   jsx,
   IMState,
-  ReactRedux
+  ReactRedux,
+  appActions,
+  getAppStore,
+  jimuHistory
 } from 'jimu-core'
 import { JimuMapView, JimuMapViewComponent } from 'jimu-arcgis'
 import GraphicsLayer from 'esri/layers/GraphicsLayer'
 import Graphic from 'esri/Graphic'
-import TileLayer from 'esri/layers/TileLayer'
+// import TileLayer from 'esri/layers/TileLayer'
 import { useState, useEffect, useRef } from 'react'
 import PhylumChart from './PhylumChart'
 import { IMConfig } from '../config'
-// import defaultMessages from './translations/default'
+import defaultMessages from './translations/default'
 import {
   getGraphics,
   getDepthRange,
@@ -59,15 +62,18 @@ interface SpeciesCount {
   normalizedCount: number
 }
 
+// WARNING: hardcoded value
+const sidebarWidgetId = 'widget_8'
+
 export default function H3Layer (props: AllWidgetProps<IMConfig>) {
   const graphicsLayerRef = useRef<GraphicsLayer>()
   const [selectedGraphic, setSelectedGraphic] = useState<Graphic|null>(null)
   const [hexbinSummary, setHexbinSummary] = useState<HexbinSummary>()
   const [serverError, setServerError] = useState(false)
   const queryParamsRef = useRef(null)
-  const tileLayer = new TileLayer({
-    url: 'https://tiles.arcgis.com/tiles/C8EMgrsFcRFL6LrL/arcgis/rest/services/multibeam_mosaic_hillshade/MapServer'
-  })
+  // const tileLayer = new TileLayer({
+  //   url: 'https://tiles.arcgis.com/tiles/C8EMgrsFcRFL6LrL/arcgis/rest/services/multibeam_mosaic_hillshade/MapServer'
+  // })
 
   // for convenience in JSX. cannot destruct from object because selectedGraphic may be null
   const h3 = selectedGraphic?.attributes.h3
@@ -80,6 +86,22 @@ export default function H3Layer (props: AllWidgetProps<IMConfig>) {
   queryParamsRef.current = widgetState?.queryParams
 
   // console.log(`re-rendering H3Layer. h3 = ${h3}; queryParams = ${widgetState?.queryParams}`)
+
+  // Get the widget state - because the sidebar state may change in the runtime, via Redux's useSelector hook
+  const sidebarWidgetState = useSelector((state: IMState) => {
+    const widgetState = state.widgetsState[sidebarWidgetId]
+    return widgetState
+  })
+
+  const handleExpandSidebar = (): void => {
+    if (sidebarWidgetState && sidebarWidgetState.collapse === false) {
+      getAppStore().dispatch(appActions.widgetStatePropChange(
+        sidebarWidgetId,
+        'collapse',
+        true
+      ))
+    }
+  }
 
   useEffect(() => {
     console.log('queryParams changed, updating graphics layer: ', widgetState?.queryParams)
@@ -132,11 +154,16 @@ export default function H3Layer (props: AllWidgetProps<IMConfig>) {
     }
   }, [selectedGraphic])
 
-  function mapClickHandler (hitTestResult) {
+  function mapClickHandler (hitTestResult: __esri.HitTestResult) {
     console.log('inside mapClickHandler with : ', hitTestResult)
-    const featureHits = hitTestResult.results?.filter(hitResult => hitResult.layer.type === 'feature')
-    const graphicHits = hitTestResult.results?.filter(hitResult => hitResult.layer.type === 'graphics')
+    const featureHits = hitTestResult.results?.filter(hitResult =>
+      hitResult.type === 'graphic' && hitResult.layer.type === 'feature'
+    ) as __esri.GraphicHit[]
+    const graphicHits = hitTestResult.results?.filter(hitResult =>
+      hitResult.type === 'graphic' && hitResult.layer.type === 'graphics'
+    ) as __esri.GraphicHit[]
     console.log(`${featureHits?.length || 0} features; ${graphicHits?.length || 0} hexbins`)
+
     if (graphicHits?.length === 1) {
       // console.log('hexbin clicked: ', graphicHits[0].graphic.attributes.h3)
       setSelectedGraphic(graphicHits[0].graphic)
@@ -144,10 +171,20 @@ export default function H3Layer (props: AllWidgetProps<IMConfig>) {
       // console.log('outside hexbin')
       setSelectedGraphic(null)
     } else {
-      // console.error('there should only be 0 or 1 graphics detected')
       // when click lands on hexbin boundary, arbitrarily use the first element in array
       // console.log('click landed on hexbin boundary...')
       setSelectedGraphic(graphicHits[0].graphic)
+    }
+
+    // open side panel and select view. featureHits takes priority
+    if (featureHits.length) {
+      handleExpandSidebar()
+      jimuHistory.changeView('section_2', 'view_4')
+    } else if (graphicHits.length) {
+      handleExpandSidebar()
+      jimuHistory.changeView('section_2', 'view_5')
+    } else {
+      // no hits. collapse side panel?
     }
   }
 
@@ -176,10 +213,10 @@ export default function H3Layer (props: AllWidgetProps<IMConfig>) {
     })
     graphicsLayerRef.current = graphicsLayer
 
-    const opts = {
-      include: graphicsLayer,
-      exclude: tileLayer
-    }
+    // const opts = {
+    //   include: graphicsLayer,
+    //   exclude: tileLayer
+    // }
 
     jmv.view.when(() => {
       jmv.view.map.add(graphicsLayer)
@@ -190,14 +227,14 @@ export default function H3Layer (props: AllWidgetProps<IMConfig>) {
       })
 
       jmv.view.on('click', (evt) => {
-        console.log('mapclick detected...')
-        // TODO why is hitTest not always responding?
+        console.log('mapclick detected: ', evt)
+        // TODO why is popup not always appearing?
         jmv.view.hitTest(evt)
-          .then(response => mapClickHandler(response))
-          .catch(e => console.error('Error in hitTest'))
+          .then((response: __esri.HitTestResult) => mapClickHandler(response))
+          .catch(e => console.error('Error in hitTest: ', e))
       })
     })
-  }
+  } // end activeViewChangeHandler
 
   function formatHexbinSummary () {
     if (serverError) {
