@@ -29,6 +29,7 @@ import {
 import { JimuMapView, JimuMapViewComponent } from 'jimu-arcgis'
 import GraphicsLayer from 'esri/layers/GraphicsLayer'
 import Graphic from 'esri/Graphic'
+import MapView from 'esri/views/MapView'
 // import TileLayer from 'esri/layers/TileLayer'
 import { useState, useEffect, useRef } from 'react'
 import PhylumChart from './PhylumChart'
@@ -71,6 +72,7 @@ export default function H3Layer (props: AllWidgetProps<IMConfig>) {
   const [hexbinSummary, setHexbinSummary] = useState<HexbinSummary>()
   const [serverError, setServerError] = useState(false)
   const queryParamsRef = useRef(null)
+  const mapViewRef = useRef<MapView>(null)
   // const tileLayer = new TileLayer({
   //   url: 'https://tiles.arcgis.com/tiles/C8EMgrsFcRFL6LrL/arcgis/rest/services/multibeam_mosaic_hillshade/MapServer'
   // })
@@ -93,13 +95,14 @@ export default function H3Layer (props: AllWidgetProps<IMConfig>) {
     return widgetState
   })
 
-  const handleExpandSidebar = (): void => {
+  const handleExpandSidebar = (sectionId: string, viewId: string): void => {
     if (sidebarWidgetState && sidebarWidgetState.collapse === false) {
       getAppStore().dispatch(appActions.widgetStatePropChange(
         sidebarWidgetId,
         'collapse',
         true
       ))
+      jimuHistory.changeView(sectionId, viewId)
     }
   }
 
@@ -118,9 +121,10 @@ export default function H3Layer (props: AllWidgetProps<IMConfig>) {
   }, [widgetState?.queryParams])
 
   useEffect(() => {
+    console.log('inside useEffect...')
     if (selectedGraphic) {
       const h3 = selectedGraphic.attributes.h3
-      // console.log('selected hexbin changed: ', h3)
+      console.log('selected hexbin changed: ', h3)
       deselectPreviousHexbin()
       toggleOutlineColor(selectedGraphic)
 
@@ -131,7 +135,6 @@ export default function H3Layer (props: AllWidgetProps<IMConfig>) {
       // use queryParamsRef to avoid having to add widgetState.queryParams to dependency array
       const whereClause = queryParamsRef.current || '1=1'
 
-      // TODO group these in a Promise.all() and store hexbin summary in a single state variable
       Promise.all([
         getDepthRange(h3, whereClause),
         getPhylumCounts(h3, whereClause),
@@ -143,19 +146,21 @@ export default function H3Layer (props: AllWidgetProps<IMConfig>) {
           phylumCounts,
           speciesCount
         })
-        // console.log('promises completed: ', depthRange, phylumCounts, speciesCount)
+        console.log('promises completed: ', depthRange, phylumCounts, speciesCount)
       }).catch((reason) => {
+        console.error('Error getting HexbinSummary. ', reason)
         setServerError(reason)
       })
     } else {
-      // console.log('no selected hexbin...')
+      console.log('no selected hexbin...')
       resetHexbinSummary()
       deselectPreviousHexbin()
     }
+    console.log('leaving useEffect...')
   }, [selectedGraphic])
 
-  function mapClickHandler (hitTestResult: __esri.HitTestResult) {
-    console.log('inside mapClickHandler with : ', hitTestResult)
+  function mapClickHandler (hitTestResult: __esri.HitTestResult, evt: __esri.ViewClickEvent) {
+    console.log('inside mapClickHandler with : ', hitTestResult, evt)
     const featureHits = hitTestResult.results?.filter(hitResult =>
       hitResult.type === 'graphic' && hitResult.layer.type === 'feature'
     ) as __esri.GraphicHit[]
@@ -165,31 +170,41 @@ export default function H3Layer (props: AllWidgetProps<IMConfig>) {
     console.log(`${featureHits?.length || 0} features; ${graphicHits?.length || 0} hexbins`)
 
     if (graphicHits?.length === 1) {
-      // console.log('hexbin clicked: ', graphicHits[0].graphic.attributes.h3)
+      console.log('hexbin clicked: ', graphicHits[0].graphic.attributes.h3)
       setSelectedGraphic(graphicHits[0].graphic)
     } else if (graphicHits?.length === 0) {
-      // console.log('outside hexbin')
+      console.log('outside hexbin')
       setSelectedGraphic(null)
     } else {
       // when click lands on hexbin boundary, arbitrarily use the first element in array
-      // console.log('click landed on hexbin boundary...')
+      console.log('click landed on hexbin boundary...')
       setSelectedGraphic(graphicHits[0].graphic)
     }
-
+    console.log('open sidepanel if necessary')
     // open side panel and select view. featureHits takes priority
     if (featureHits.length) {
-      handleExpandSidebar()
-      jimuHistory.changeView('section_2', 'view_4')
+      handleExpandSidebar('section_2', 'view_4')
     } else if (graphicHits.length) {
-      handleExpandSidebar()
-      jimuHistory.changeView('section_2', 'view_5')
+      handleExpandSidebar('section_2', 'view_5')
     } else {
       // no hits. collapse side panel?
+      console.log('no hits - leave sidepanel in current state')
     }
+
+    // HACK - force popup visibility
+    if (featureHits.length && !mapViewRef.current.popup.visible) {
+      mapViewRef.current.popup.visible = true
+      console.warn('forcing popup to display')
+    } else if (!featureHits.length && mapViewRef.current.popup.visible) {
+      mapViewRef.current.popup.visible = false
+      console.warn('forcing popup to hide')
+    }
+
+    console.log('leaving mapClickHandler...')
   }
 
   function deselectPreviousHexbin () {
-    // finds only the *first* highlighted graphic but there should only be 0 or 1
+    // finds only the *first* highlighted graphic but there should never be > 1
     const highlightedGraphic = getHighlightedGraphic(graphicsLayerRef.current)
     if (highlightedGraphic) {
       toggleOutlineColor(highlightedGraphic)
@@ -206,7 +221,7 @@ export default function H3Layer (props: AllWidgetProps<IMConfig>) {
       console.warn('no MapView')
       return
     }
-
+    mapViewRef.current = jmv.view as MapView
     const graphicsLayer = new GraphicsLayer({
       title: 'Hexbins',
       listMode: 'show'
@@ -219,6 +234,9 @@ export default function H3Layer (props: AllWidgetProps<IMConfig>) {
     // }
 
     jmv.view.when(() => {
+      // TODO why is this not working? i.e. popups still appear
+      jmv.view.popup.autoOpenEnabled = false
+
       jmv.view.map.add(graphicsLayer)
       // queryParams not needed since initial draw is for all features
       getGraphics().then(graphics => {
@@ -228,12 +246,18 @@ export default function H3Layer (props: AllWidgetProps<IMConfig>) {
 
       jmv.view.on('click', (evt) => {
         console.log('mapclick detected: ', evt)
-        // TODO why is popup not always appearing?
+        // HACK - force any previously opened popup to close
+        if (jmv.view.popup.visible) { jmv.view.popup.visible = false }
+
         jmv.view.hitTest(evt)
-          .then((response: __esri.HitTestResult) => mapClickHandler(response))
+          .then((response: __esri.HitTestResult) => {
+            console.log('before mapClickHandler...')
+            mapClickHandler(response, evt)
+            console.log('after mapClickHandler...')
+          })
           .catch(e => console.error('Error in hitTest: ', e))
       })
-    })
+    }) // end MapView#when
   } // end activeViewChangeHandler
 
   function formatHexbinSummary () {
