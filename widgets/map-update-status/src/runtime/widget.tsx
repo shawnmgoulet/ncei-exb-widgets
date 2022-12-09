@@ -1,21 +1,39 @@
 /** @jsx jsx */
-import { AllWidgetProps, jsx, IMState } from 'jimu-core'
-import { useState, useEffect} from 'react'
+import { AllWidgetProps, jsx } from 'jimu-core'
+import { useState, useEffect, useRef } from 'react'
 import { JimuMapView, JimuMapViewComponent } from 'jimu-arcgis'
-import { defaultMessages as jimuUIMessages } from 'jimu-ui'
+// import { defaultMessages as jimuUIMessages } from 'jimu-ui'
 import { IMConfig } from '../config'
 
 export default function Widget (props: AllWidgetProps<IMConfig>) {
   const [view, setView] = useState<JimuMapView>(null)
   const [isUpdating, setIsUpdating] = useState(false)
+  const timeoutId = useRef(null)
+  const timeoutForMapUpdate = 30000
 
   useEffect(() => {
     if (!view) { return }
+
+    function setMapUpdateTimeout () {
+      timeoutId.current = setTimeout(overrideMapStatus, timeoutForMapUpdate)
+    }
+
+    function overrideMapStatus () {
+      console.warn(`forcing MapView 'updating' status to 'false' after waiting for ${timeoutForMapUpdate / 1000} seconds`)
+      setIsUpdating(false)
+    }
+
     const mapView = view.view
 
     const updatingWatchHandle = mapView.watch(
       'updating',
       (newStatus) => {
+        // don't allow isUpdating to remain true for > 30 secs
+        if (newStatus) {
+          setMapUpdateTimeout()
+        } else {
+          clearTimeout(timeoutId.current)
+        }
         setIsUpdating(newStatus)
       })
 
@@ -24,6 +42,7 @@ export default function Widget (props: AllWidgetProps<IMConfig>) {
       if (updatingWatchHandle) {
         updatingWatchHandle.remove()
       }
+      if (timeoutId.current) { clearTimeout(timeoutId.current) }
     }
   }, [view])
 
@@ -47,9 +66,10 @@ export default function Widget (props: AllWidgetProps<IMConfig>) {
             </div>
           : ''
         }
-        {(isUpdating)
-          ? <span style={{ fontSize: 'medium', color: 'red' }}>map is updating...</span>
-          : ''}
+        {(!isUpdating)
+          ? ''
+          : <span style={{ fontSize: 'medium', color: 'red' }}>map is updating...</span>
+        }
       </div>
     </div>
   )
